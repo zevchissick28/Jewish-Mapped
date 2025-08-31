@@ -1,0 +1,28 @@
+{
+  "name": "jewish-mapped",
+  "version": "1.0.0",
+  "description": "A web app for finding Jewish institutions across the United States",
+  "main": "index.html",
+  "scripts": {
+    "start": "python3 -m http.server 8000",
+    "start-node": "npx http-server -p 8000 -c-1",
+    "dev": "python3 -m http.server 8000"
+  },
+  "keywords": [
+    "jewish",
+    "synagogue",
+    "institutions",
+    "search",
+    "community"
+  ],
+  "author": "Jewish Mapped Team",
+  "license": "MIT",
+  "devDependencies": {
+    "http-server": "^14.1.1"
+  },
+  "dependencies": {},
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-username/jewish-mapped.git"
+  }
+} 

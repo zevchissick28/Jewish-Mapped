@@ -1,0 +1,928 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jewish Mapped</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #f7f8fa;
+            color: #2a2a2a;
+        }
+
+        /* Header */
+        .header {
+            background: #fff;
+            border-bottom: 1px solid #e5e7eb;
+            padding: 12px 0;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .nav-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 24px;
+            font-weight: 700;
+            color: #006ba6;
+            text-decoration: none;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 32px;
+            align-items: center;
+        }
+
+        .nav-link {
+            text-decoration: none;
+            color: #2a2a2a;
+            font-weight: 500;
+            padding: 8px 16px;
+            border-radius: 8px;
+            transition: background-color 0.2s;
+        }
+
+        .nav-link:hover {
+            background-color: #f3f4f6;
+        }
+
+        .sign-in-btn {
+            background: #006ba6;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .sign-in-btn:hover {
+            background: #005691;
+        }
+
+        /* Hero Section */
+        .hero {
+            background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+            color: white;
+            padding: 80px 20px 120px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000"><polygon fill="%23ffffff05" points="0,1000 1000,0 1000,1000"/></svg>');
+            background-size: cover;
+        }
+
+        .hero-content {
+            max-width: 800px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 1;
+        }
+
+        .hero-title {
+            font-size: 48px;
+            font-weight: 700;
+            margin-bottom: 16px;
+            line-height: 1.1;
+        }
+
+        .hero-subtitle {
+            font-size: 20px;
+            margin-bottom: 48px;
+            opacity: 0.9;
+            font-weight: 400;
+        }
+
+        /* Search Container */
+        .search-container {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            padding: 24px;
+            margin-bottom: 32px;
+        }
+
+        /* Search Tabs */
+        .search-tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 24px;
+            background: #f3f4f6;
+            padding: 4px;
+            border-radius: 12px;
+        }
+
+        .tab-btn {
+            flex: 1;
+            background: transparent;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-weight: 600;
+            color: #6b7280;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .tab-btn.active {
+            background: white;
+            color: #1f2937;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        /* AI Search Bar */
+        .ai-search-bar {
+            background: #f9fafb;
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            margin-bottom: 16px;
+            transition: border-color 0.2s;
+        }
+
+        .ai-search-bar:focus-within {
+            border-color: #3b82f6;
+        }
+
+        .search-icon {
+            color: #6b7280;
+            margin: 0 16px;
+            font-size: 20px;
+        }
+
+        .ai-search-bar input {
+            flex: 1;
+            border: none;
+            background: transparent;
+            padding: 20px 0;
+            font-size: 16px;
+            outline: none;
+            color: #1f2937;
+        }
+
+        .ai-search-bar input::placeholder {
+            color: #9ca3af;
+        }
+
+        .search-btn {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 16px 32px;
+            margin: 8px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: background-color 0.2s;
+        }
+
+        .search-btn:hover {
+            background: #2563eb;
+        }
+
+        .ai-help-text {
+            text-align: center;
+            color: #6b7280;
+            font-size: 14px;
+        }
+
+        /* Tab Content */
+        .tab-pane {
+            display: none;
+        }
+
+        .tab-pane.active {
+            display: block;
+        }
+
+        .zipcode-search {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .zipcode-input {
+            flex: 1;
+            padding: 16px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 16px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .zipcode-input:focus {
+            border-color: #3b82f6;
+        }
+
+        /* Category Grid */
+        .category-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 12px;
+        }
+
+        .category-btn, .affiliation-btn {
+            background: #f9fafb;
+            border: 2px solid #e5e7eb;
+            padding: 20px;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
+            font-weight: 600;
+            color: #374151;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .category-btn:hover, .affiliation-btn:hover {
+            background: #3b82f6;
+            color: white;
+            border-color: #3b82f6;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+        }
+
+        .category-btn i, .affiliation-btn i {
+            font-size: 24px;
+            color: #3b82f6;
+            transition: color 0.2s;
+        }
+
+        .category-btn:hover i, .affiliation-btn:hover i {
+            color: white;
+        }
+
+        /* Affiliation Grid */
+        .affiliation-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 12px;
+        }
+
+        /* Quick Stats */
+        .quick-stats {
+            background: white;
+            padding: 60px 20px;
+        }
+
+        .stats-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 40px;
+            text-align: center;
+        }
+
+        .stat-item {
+            padding: 20px;
+        }
+
+        .stat-number {
+            font-size: 48px;
+            font-weight: 700;
+            color: #3b82f6;
+            margin-bottom: 8px;
+        }
+
+        .stat-label {
+            font-size: 16px;
+            color: #6b7280;
+            font-weight: 500;
+        }
+    </style>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="nav-container">
+            <a href="#" class="logo">🕎 Jewish Mapped</a>
+            <nav class="nav-links">
+                <a href="#" class="nav-link">Find</a>
+                <a href="#" class="nav-link">Community</a>
+                <a href="#" class="nav-link">Resources</a>
+                <a href="#" class="nav-link">About</a>
+                <button class="sign-in-btn">Sign in</button>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="hero-content">
+            <h1 class="hero-title">Find Your Jewish Community</h1>
+            <p class="hero-subtitle">Discover synagogues, schools, and programs across America</p>
+            
+            <div class="search-container">
+                <!-- Search Tabs -->
+                <div class="search-tabs">
+                    <button class="tab-btn active" data-tab="ai">
+                        <i class="fas fa-robot"></i>
+                        AI Search
+                    </button>
+                    <button class="tab-btn" data-tab="zipcode">
+                        <i class="fas fa-map-marker-alt"></i>
+                        Zip Code
+                    </button>
+                    <button class="tab-btn" data-tab="category">
+                        <i class="fas fa-list"></i>
+                        Category
+                    </button>
+                    <button class="tab-btn" data-tab="affiliation">
+                        <i class="fas fa-synagogue"></i>
+                        Affiliation
+                    </button>
+                </div>
+
+                <!-- Tab Content -->
+                <div class="tab-content">
+                    <!-- AI Search -->
+                    <div class="tab-pane active" id="ai-tab">
+                        <div class="ai-search-bar">
+                            <i class="fas fa-robot search-icon"></i>
+                            <input type="text" id="aiSearchInput" placeholder="Try: 'Orthodox synagogue with youth programs' or 'Reform temple in Manhattan'">
+                            <button class="search-btn" id="aiSearchBtn">
+                                <i class="fas fa-search"></i>
+                                Search
+                            </button>
+                        </div>
+                        <p class="ai-help-text">
+                            <i class="fas fa-lightbulb"></i>
+                            Describe what you're looking for in plain English
+                        </p>
+                    </div>
+
+                    <!-- Zip Code Search -->
+                    <div class="tab-pane" id="zipcode-tab">
+                        <div class="zipcode-search">
+                            <input type="text" id="zipcodeInput" class="zipcode-input" placeholder="Enter zip code (e.g., 10001)">
+                            <button class="search-btn" onclick="searchByZipcode()">
+                                <i class="fas fa-search"></i>
+                                Search
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Category Search -->
+                    <div class="tab-pane" id="category-tab">
+                        <div class="category-grid">
+                            <button class="category-btn" onclick="searchByCategory('synagogue')">
+                                <i class="fas fa-synagogue"></i>
+                                Synagogues
+                            </button>
+                            <button class="category-btn" onclick="searchByCategory('school')">
+                                <i class="fas fa-school"></i>
+                                Schools
+                            </button>
+                            <button class="category-btn" onclick="searchByCategory('youth')">
+                                <i class="fas fa-users"></i>
+                                Youth Programs
+                            </button>
+                            <button class="category-btn" onclick="searchByCategory('education')">
+                                <i class="fas fa-book"></i>
+                                Education
+                            </button>
+                            <button class="category-btn" onclick="searchByCategory('hillel')">
+                                <i class="fas fa-university"></i>
+                                Campus Hillel
+                            </button>
+                            <button class="category-btn" onclick="searchByCategory('community')">
+                                <i class="fas fa-heart"></i>
+                                Community
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Affiliation Search -->
+                    <div class="tab-pane" id="affiliation-tab">
+                        <div class="affiliation-grid">
+                            <button class="affiliation-btn" onclick="searchByAffiliation('Reform')">
+                                <i class="fas fa-synagogue"></i>
+                                Reform
+                            </button>
+                            <button class="affiliation-btn" onclick="searchByAffiliation('Conservative')">
+                                <i class="fas fa-synagogue"></i>
+                                Conservative
+                            </button>
+                            <button class="affiliation-btn" onclick="searchByAffiliation('Orthodox')">
+                                <i class="fas fa-synagogue"></i>
+                                Orthodox
+                            </button>
+                            <button class="affiliation-btn" onclick="searchByAffiliation('Reconstructionist')">
+                                <i class="fas fa-synagogue"></i>
+                                Reconstructionist
+                            </button>
+                            <button class="affiliation-btn" onclick="searchByAffiliation('Chabad')">
+                                <i class="fas fa-synagogue"></i>
+                                Chabad
+                            </button>
+                            <button class="affiliation-btn" onclick="searchByAffiliation('Pluralistic')">
+                                <i class="fas fa-synagogue"></i>
+                                Pluralistic
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Quick Stats -->
+    <section class="quick-stats">
+        <div class="stats-container">
+            <div class="stat-item">
+                <div class="stat-number">1,346</div>
+                <div class="stat-label">Jewish Institutions</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number">50</div>
+                <div class="stat-label">States Covered</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number">1,000+</div>
+                <div class="stat-label">Communities Served</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number">100%</div>
+                <div class="stat-label">Free to Use</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Might Interest You Section -->
+    <section class="recommendations">
+        <div class="container">
+            <h2 class="section-title">
+                <i class="fas fa-star"></i>
+                Might Interest You
+            </h2>
+            <div class="recommendations-grid" id="recommendationsGrid">
+                <!-- Recommendations will be loaded here -->
+            </div>
+        </div>
+    </section>
+
+    <!-- Search Results Section -->
+    <section class="search-results" id="searchResults" style="display: none;">
+        <div class="container">
+            <h2 class="section-title" id="resultsTitle">Search Results</h2>
+            <div class="results-grid" id="resultsGrid">
+                <!-- Results will be loaded here -->
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h3>🕎 Jewish Mapped</h3>
+                    <p>Connecting Jewish communities across America</p>
+                    <div class="social-links">
+                        <a href="#"><i class="fab fa-facebook"></i></a>
+                        <a href="#"><i class="fab fa-twitter"></i></a>
+                        <a href="#"><i class="fab fa-instagram"></i></a>
+                    </div>
+                </div>
+                <div class="footer-section">
+                    <h4>Find</h4>
+                    <a href="#">Synagogues</a>
+                    <a href="#">Jewish Schools</a>
+                    <a href="#">Youth Programs</a>
+                    <a href="#">Campus Hillel</a>
+                </div>
+                <div class="footer-section">
+                    <h4>Resources</h4>
+                    <a href="#">Community Directory</a>
+                    <a href="#">Event Calendar</a>
+                    <a href="#">Educational Programs</a>
+                    <a href="#">Support Services</a>
+                </div>
+                <div class="footer-section">
+                    <h4>Support</h4>
+                    <a href="#">Help Center</a>
+                    <a href="#">Contact Us</a>
+                    <a href="#">Privacy Policy</a>
+                    <a href="#">Terms of Service</a>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2024 Jewish Mapped. All rights reserved. | Connecting communities nationwide.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Loading Spinner -->
+    <div class="loading-spinner" id="loadingSpinner" style="display: none;">
+        <div class="spinner"></div>
+        <p>Searching our database...</p>
+    </div>
+
+    <style>
+        /* Additional styles for sections and components */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        /* Recommendations Section */
+        .recommendations {
+            background: #f8fafc;
+            padding: 80px 20px;
+        }
+
+        .section-title {
+            text-align: center;
+            font-size: 32px;
+            font-weight: 700;
+            color: #1f2937;
+            margin-bottom: 48px;
+        }
+
+        .section-title i {
+            color: #fbbf24;
+            margin-right: 12px;
+        }
+
+        .recommendations-grid, .results-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 24px;
+        }
+
+        /* Search Results */
+        .search-results {
+            background: white;
+            padding: 80px 20px;
+        }
+
+        /* Institution Cards */
+        .institution-card {
+            background: white;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            transition: all 0.3s ease;
+            cursor: pointer;
+            border: 1px solid #e5e7eb;
+        }
+
+        .institution-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+
+        .card-header {
+            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+            color: white;
+            padding: 24px;
+        }
+
+        .card-title {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            line-height: 1.2;
+        }
+
+        .card-denomination {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            display: inline-block;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .card-body {
+            padding: 24px;
+        }
+
+        .card-address, .card-phone {
+            color: #6b7280;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+        }
+
+        .card-address i, .card-phone i {
+            color: #3b82f6;
+            width: 16px;
+        }
+
+        .card-programs {
+            margin-top: 16px;
+        }
+
+        .card-programs strong {
+            color: #374151;
+            font-size: 14px;
+            display: block;
+            margin-bottom: 8px;
+        }
+
+        .program-tag {
+            background: #dbeafe;
+            color: #1e40af;
+            padding: 4px 12px;
+            border-radius: 16px;
+            font-size: 12px;
+            font-weight: 500;
+            margin: 4px 8px 4px 0;
+            display: inline-block;
+        }
+
+        .card-website {
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        .website-btn {
+            background: #3b82f6;
+            color: white;
+            text-decoration: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: background-color 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+        }
+
+        .website-btn:hover {
+            background: #2563eb;
+        }
+
+        /* Footer */
+        .footer {
+            background: #1f2937;
+            color: white;
+            padding: 60px 20px 20px;
+        }
+
+        .footer-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .footer-content {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 40px;
+            margin-bottom: 40px;
+        }
+
+        .footer-section h3 {
+            font-size: 20px;
+            margin-bottom: 16px;
+            color: #3b82f6;
+        }
+
+        .footer-section h4 {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: #f3f4f6;
+        }
+
+        .footer-section p {
+            color: #9ca3af;
+            margin-bottom: 16px;
+            line-height: 1.6;
+        }
+
+        .footer-section a {
+            color: #d1d5db;
+            text-decoration: none;
+            display: block;
+            margin-bottom: 8px;
+            transition: color 0.2s;
+            font-size: 14px;
+        }
+
+        .footer-section a:hover {
+            color: #3b82f6;
+        }
+
+        .social-links {
+            display: flex;
+            gap: 16px;
+            margin-top: 16px;
+        }
+
+        .social-links a {
+            background: #374151;
+            color: #d1d5db;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .social-links a:hover {
+            background: #3b82f6;
+            color: white;
+        }
+
+        .footer-bottom {
+            border-top: 1px solid #374151;
+            padding-top: 20px;
+            text-align: center;
+            color: #9ca3af;
+            font-size: 14px;
+        }
+
+        /* Loading Spinner */
+        .loading-spinner {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            color: white;
+        }
+
+        .spinner {
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top: 4px solid #3b82f6;
+            width: 48px;
+            height: 48px;
+            animation: spin 1s linear infinite;
+            margin-bottom: 16px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loading-spinner p {
+            font-size: 16px;
+            font-weight: 500;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .hero-title {
+                font-size: 36px;
+            }
+
+            .hero-subtitle {
+                font-size: 18px;
+            }
+
+            .search-tabs {
+                flex-direction: column;
+                gap: 4px;
+            }
+
+            .tab-btn {
+                padding: 16px;
+            }
+
+            .ai-search-bar {
+                flex-direction: column;
+                gap: 16px;
+                padding: 16px;
+            }
+
+            .search-btn {
+                width: 100%;
+                justify-content: center;
+                margin: 0;
+            }
+
+            .category-grid, .affiliation-grid {
+                grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            }
+
+            .recommendations-grid, .results-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .nav-links {
+                display: none;
+            }
+
+            .stats-container {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 20px;
+            }
+
+            .stat-number {
+                font-size: 36px;
+            }
+        }
+    </style>
+
+    <script>
+        // Update the script to handle the new tab structure
+        document.addEventListener('DOMContentLoaded', function() {
+            // Load data
+            loadInstitutionsData();
+            
+            // Tab functionality
+            const tabBtns = document.querySelectorAll('.tab-btn');
+            const tabPanes = document.querySelectorAll('.tab-pane');
+            
+            tabBtns.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const tabId = this.getAttribute('data-tab');
+                    
+                    // Remove active class from all tabs and panes
+                    tabBtns.forEach(b => b.classList.remove('active'));
+                    tabPanes.forEach(p => p.classList.remove('active'));
+                    
+                    // Add active class to clicked tab and corresponding pane
+                    this.classList.add('active');
+                    document.getElementById(tabId + '-tab').classList.add('active');
+                });
+            });
+            
+            // AI Search functionality
+            const aiSearchBtn = document.getElementById('aiSearchBtn');
+            const aiSearchInput = document.getElementById('aiSearchInput');
+            
+            if (aiSearchBtn) {
+                aiSearchBtn.addEventListener('click', handleAISearch);
+            }
+            
+            if (aiSearchInput) {
+                aiSearchInput.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        handleAISearch();
+                    }
+                });
+            }
+            
+            // Zipcode search enter key
+            const zipcodeInput = document.getElementById('zipcodeInput');
+            if (zipcodeInput) {
+                zipcodeInput.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        searchByZipcode();
+                    }
+                });
+            }
+        });
+    </script>
+    <script src="script.js"></script>
+</body>
+</html> 
