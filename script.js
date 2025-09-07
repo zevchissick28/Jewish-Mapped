@@ -1,4 +1,5 @@
 // Global variables
+console.log('Script.js is loading...');
 let institutionsData = {};
 let allInstitutions = [];
 
@@ -370,6 +371,12 @@ function createInstitutionCard(institution) {
                         </a>
                     </div>
                 ` : ''}
+                
+                <div class="card-actions">
+                    <button class="connect-btn" onclick="connectToInstitution('${institution['Synagogue Name'].replace(/'/g, "\\'")}', '${institution.Denomination || 'N/A'}', '${institution['Full Address'].replace(/'/g, "\\'")}', '${getInstitutionType(institution)}')">
+                        <i class="fas fa-plus"></i> Connect
+                    </button>
+                </div>
             </div>
         </div>
     `;
@@ -509,4 +516,617 @@ function initializeSearchSuggestions() {
     
     document.body.appendChild(datalist);
     aiSearchInput.setAttribute('list', 'searchSuggestions');
-} 
+}
+
+// =============================================================================
+// AUTHENTICATION SYSTEM
+// =============================================================================
+
+// Database simulation - In a real application, this would be handled by a backend server
+let userDatabase = JSON.parse(localStorage.getItem('jewishMappedUsers')) || [];
+let currentUser = JSON.parse(localStorage.getItem('jewishMappedCurrentUser')) || null;
+
+// Authentication Modal Functions
+function openAuthModal() {
+    console.log('openAuthModal called');
+    const modal = document.getElementById('authModal');
+    console.log('Modal element:', modal);
+    if (modal) {
+        modal.style.display = 'flex';
+        showLoginForm();
+    } else {
+        console.error('Modal element not found!');
+    }
+}
+
+function closeAuthModal() {
+    document.getElementById('authModal').style.display = 'none';
+    // Clear forms
+    document.getElementById('loginForm').querySelector('form').reset();
+    document.getElementById('signupForm').querySelector('form').reset();
+    hideOtherInterestField();
+}
+
+function showLoginForm() {
+    document.getElementById('loginForm').style.display = 'block';
+    document.getElementById('signupForm').style.display = 'none';
+}
+
+function showSignupForm() {
+    document.getElementById('loginForm').style.display = 'none';
+    document.getElementById('signupForm').style.display = 'block';
+}
+
+// Handle Login
+function handleLogin(event) {
+    event.preventDefault();
+    
+    const email = document.getElementById('loginEmail').value;
+    const password = document.getElementById('loginPassword').value;
+    
+    // Find user in database
+    const user = userDatabase.find(u => u.email === email && u.password === password);
+    
+    if (user) {
+        // Successful login
+        currentUser = user;
+        localStorage.setItem('jewishMappedCurrentUser', JSON.stringify(currentUser));
+        
+        alert(`Welcome back, ${user.firstName}!`);
+        closeAuthModal();
+        updateUIForLoggedInUser();
+    } else {
+        alert('Invalid email or password. Please try again.');
+    }
+}
+
+// Handle Signup
+function handleSignup(event) {
+    event.preventDefault();
+    
+    // Collect form data
+    const formData = {
+        id: Date.now(), // Simple ID generation
+        firstName: document.getElementById('firstName').value,
+        lastName: document.getElementById('lastName').value,
+        email: document.getElementById('signupEmail').value,
+        password: document.getElementById('signupPassword').value,
+        address1: document.getElementById('address1').value,
+        address2: document.getElementById('address2').value,
+        city: document.getElementById('city').value,
+        state: document.getElementById('state').value,
+        zipCode: document.getElementById('zipCode').value,
+        homeAddress: buildFullAddress(), // Combined address for backward compatibility
+        jewishAffiliation: document.getElementById('jewishAffiliation').value,
+        interests: getSelectedInterests(),
+        otherInterestDetails: document.getElementById('otherInterestDetails').value,
+        registrationDate: new Date().toISOString(),
+        lastLogin: new Date().toISOString()
+    };
+    
+    // Validate required fields
+    if (!validateSignupForm(formData)) {
+        return;
+    }
+    
+    // Check if email already exists
+    if (userDatabase.find(u => u.email === formData.email)) {
+        alert('An account with this email already exists. Please use a different email or sign in.');
+        return;
+    }
+    
+    // Add user to database
+    userDatabase.push(formData);
+    localStorage.setItem('jewishMappedUsers', JSON.stringify(userDatabase));
+    
+    // Log user in automatically
+    currentUser = formData;
+    localStorage.setItem('jewishMappedCurrentUser', JSON.stringify(currentUser));
+    
+    // Show success message with storage info
+    alert(`Welcome to Jewish Mapped, ${formData.firstName}! Your account has been created successfully.\n\nYour data is stored locally in your browser's localStorage for this demo.`);
+    
+    console.log('User data stored in localStorage:', formData);
+    console.log('All users database:', userDatabase);
+    
+    closeAuthModal();
+    updateUIForLoggedInUser();
+    
+    // Redirect to profile page after signup
+    setTimeout(() => {
+        showProfilePage();
+    }, 500);
+}
+
+// Get selected interests from checkboxes
+function getSelectedInterests() {
+    const checkboxes = document.querySelectorAll('input[name="interests"]:checked');
+    return Array.from(checkboxes).map(cb => cb.value);
+}
+
+// Build full address from separate fields
+function buildFullAddress() {
+    const address1 = document.getElementById('address1').value.trim();
+    const address2 = document.getElementById('address2').value.trim();
+    const city = document.getElementById('city').value.trim();
+    const state = document.getElementById('state').value.trim();
+    const zipCode = document.getElementById('zipCode').value.trim();
+    
+    let fullAddress = address1;
+    if (address2) {
+        fullAddress += ', ' + address2;
+    }
+    fullAddress += ', ' + city + ', ' + state + ' ' + zipCode;
+    
+    return fullAddress;
+}
+
+// Validate signup form
+function validateSignupForm(data) {
+    if (!data.firstName.trim()) {
+        alert('Please enter your first name.');
+        return false;
+    }
+    
+    if (!data.lastName.trim()) {
+        alert('Please enter your last name.');
+        return false;
+    }
+    
+    if (!data.email.trim()) {
+        alert('Please enter your email address.');
+        return false;
+    }
+    
+    if (!data.password || data.password.length < 6) {
+        alert('Password must be at least 6 characters long.');
+        return false;
+    }
+    
+    if (!data.address1.trim()) {
+        alert('Please enter your street address.');
+        return false;
+    }
+    
+    if (!data.city.trim()) {
+        alert('Please enter your city.');
+        return false;
+    }
+    
+    if (!data.state.trim()) {
+        alert('Please enter your state.');
+        return false;
+    }
+    
+    if (!data.zipCode.trim()) {
+        alert('Please enter your zip code.');
+        return false;
+    }
+    
+    // Validate zip code format
+    const zipPattern = /^[0-9]{5}(-[0-9]{4})?$/;
+    if (!zipPattern.test(data.zipCode.trim())) {
+        alert('Please enter a valid zip code (e.g., 12345 or 12345-6789).');
+        return false;
+    }
+    
+    if (!data.jewishAffiliation) {
+        alert('Please select your Jewish affiliation.');
+        return false;
+    }
+    
+    if (data.interests.length === 0) {
+        alert('Please select at least one interest.');
+        return false;
+    }
+    
+    // If "other" is selected, make sure they filled out the details
+    if (data.interests.includes('other') && !data.otherInterestDetails.trim()) {
+        alert('Please describe your other interests.');
+        return false;
+    }
+    
+    return true;
+}
+
+// Show/hide other interest field
+function setupOtherInterestToggle() {
+    const otherCheckbox = document.getElementById('otherInterest');
+    const otherGroup = document.getElementById('otherInterestGroup');
+    
+    if (otherCheckbox) {
+        otherCheckbox.addEventListener('change', function() {
+            if (this.checked) {
+                otherGroup.style.display = 'block';
+                document.getElementById('otherInterestDetails').required = true;
+            } else {
+                otherGroup.style.display = 'none';
+                document.getElementById('otherInterestDetails').required = false;
+                document.getElementById('otherInterestDetails').value = '';
+            }
+        });
+    }
+}
+
+function hideOtherInterestField() {
+    document.getElementById('otherInterestGroup').style.display = 'none';
+    document.getElementById('otherInterestDetails').required = false;
+}
+
+// Update UI for logged-in user
+function updateUIForLoggedInUser() {
+    const signInBtn = document.querySelector('.sign-in-btn');
+    const profileLink = document.getElementById('myProfileLink');
+    
+    if (currentUser && signInBtn) {
+        signInBtn.textContent = `Hi, ${currentUser.firstName}`;
+        signInBtn.onclick = showUserProfile;
+        
+        // Show My Profile link
+        if (profileLink) {
+            profileLink.style.display = 'inline-block';
+        }
+    }
+}
+
+// Show user profile (placeholder)
+function showUserProfile() {
+    if (currentUser) {
+        alert(`User Profile:\n\nName: ${currentUser.firstName} ${currentUser.lastName}\nEmail: ${currentUser.email}\nAffiliation: ${currentUser.jewishAffiliation}\nInterests: ${currentUser.interests.join(', ')}\n\nClick here to log out.`);
+        
+        // Simple logout option
+        if (confirm('Would you like to log out?')) {
+            logout();
+        }
+    }
+}
+
+// Logout function
+function logout() {
+    currentUser = null;
+    localStorage.removeItem('jewishMappedCurrentUser');
+    
+    const signInBtn = document.querySelector('.sign-in-btn');
+    const profileLink = document.getElementById('myProfileLink');
+    
+    if (signInBtn) {
+        signInBtn.textContent = 'Sign in';
+        signInBtn.onclick = openAuthModal;
+    }
+    
+    // Hide My Profile link
+    if (profileLink) {
+        profileLink.style.display = 'none';
+    }
+    
+    // Hide profile page if currently viewing it
+    const profilePage = document.getElementById('profilePage');
+    if (profilePage && profilePage.style.display === 'block') {
+        hideProfilePage();
+    }
+    
+    alert('You have been logged out successfully.');
+}
+
+// Initialize authentication on page load
+document.addEventListener('DOMContentLoaded', function() {
+    setupOtherInterestToggle();
+    
+    // Check if user is already logged in
+    if (currentUser) {
+        updateUIForLoggedInUser();
+    }
+    
+    // Close modal when clicking outside
+    document.getElementById('authModal').addEventListener('click', function(e) {
+        if (e.target === this) {
+            closeAuthModal();
+        }
+    });
+});
+
+// =============================================================================
+// PROFILE PAGE FUNCTIONALITY
+// =============================================================================
+
+// Show profile page
+function showProfilePage() {
+    if (!currentUser) {
+        alert('Please sign in to view your profile.');
+        openAuthModal();
+        return;
+    }
+    
+    // Hide other sections
+    document.querySelector('.hero').style.display = 'none';
+    document.getElementById('searchResults').style.display = 'none';
+    
+    // Show profile page
+    document.getElementById('profilePage').style.display = 'block';
+    
+    // Load profile data
+    loadProfileData();
+    loadUserConnections();
+    
+    // Scroll to top
+    window.scrollTo(0, 0);
+}
+
+// Hide profile page and return to main view
+function hideProfilePage() {
+    document.getElementById('profilePage').style.display = 'none';
+    document.querySelector('.hero').style.display = 'block';
+    window.scrollTo(0, 0);
+}
+
+// Load user profile data into the profile page
+function loadProfileData() {
+    if (!currentUser) return;
+    
+    document.getElementById('profileName').textContent = `${currentUser.firstName} ${currentUser.lastName}`;
+    document.getElementById('profileEmail').textContent = currentUser.email;
+    document.getElementById('profileAddress').textContent = currentUser.homeAddress || `${currentUser.address1}, ${currentUser.city}, ${currentUser.state} ${currentUser.zipCode}`;
+    document.getElementById('profileAffiliation').textContent = currentUser.jewishAffiliation || 'Not specified';
+    document.getElementById('profileInterests').textContent = currentUser.interests.join(', ') || 'None specified';
+    
+    // Format registration date
+    const regDate = new Date(currentUser.registrationDate);
+    document.getElementById('profileMemberSince').textContent = regDate.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+    });
+}
+
+// Get institution type for connection categorization
+function getInstitutionType(institution) {
+    const name = institution['Synagogue Name'].toLowerCase();
+    const programs = institution['Educational Programs'] || {};
+    
+    if (name.includes('hillel')) return 'hillel';
+    if (programs['Hebrew School'] && programs['Hebrew School'].toLowerCase().includes('yes')) return 'school';
+    if (programs['Youth Groups'] && programs['Youth Groups'].toLowerCase().includes('yes')) return 'youth';
+    if (programs['Family and Intergenerational Learning'] && programs['Family and Intergenerational Learning'].toLowerCase().includes('yes')) return 'community';
+    return 'synagogue';
+}
+
+// Connect to an institution
+function connectToInstitution(name, denomination, address, type) {
+    if (!currentUser) {
+        alert('Please sign in to connect with institutions.');
+        openAuthModal();
+        return;
+    }
+    
+    // Get existing connections
+    const connections = getUserConnections();
+    
+    // Check if already connected
+    const existingConnection = connections.find(conn => conn.name === name);
+    if (existingConnection) {
+        alert(`You're already connected to ${name}!`);
+        return;
+    }
+    
+    // Create new connection
+    const newConnection = {
+        id: Date.now(),
+        name: name,
+        denomination: denomination,
+        address: address,
+        type: type,
+        connectedDate: new Date().toISOString(),
+        status: 'active'
+    };
+    
+    // Add to connections
+    connections.push(newConnection);
+    saveUserConnections(connections);
+    
+    // Update current user's connections count
+    currentUser.connectionsCount = connections.length;
+    localStorage.setItem('jewishMappedCurrentUser', JSON.stringify(currentUser));
+    
+    // Show success message
+    alert(`Successfully connected to ${name}! You can view all your connections in your profile.`);
+    
+    // If profile page is open, refresh it
+    const profilePage = document.getElementById('profilePage');
+    if (profilePage.style.display === 'block') {
+        loadUserConnections();
+    }
+}
+
+// Get user's connections from localStorage
+function getUserConnections() {
+    if (!currentUser) return [];
+    
+    const connectionsKey = `connections_${currentUser.id}`;
+    const connections = localStorage.getItem(connectionsKey);
+    return connections ? JSON.parse(connections) : [];
+}
+
+// Save user's connections to localStorage
+function saveUserConnections(connections) {
+    if (!currentUser) return;
+    
+    const connectionsKey = `connections_${currentUser.id}`;
+    localStorage.setItem(connectionsKey, JSON.stringify(connections));
+}
+
+// Load and display user connections
+function loadUserConnections() {
+    const connections = getUserConnections();
+    
+    // Update stats
+    document.getElementById('totalConnections').textContent = connections.length;
+    
+    // Calculate recent connections (this month)
+    const thisMonth = new Date();
+    thisMonth.setDate(1);
+    const recentConnections = connections.filter(conn => 
+        new Date(conn.connectedDate) >= thisMonth
+    );
+    document.getElementById('recentConnections').textContent = recentConnections.length;
+    
+    // Display connections
+    displayConnections(connections);
+}
+
+// Display connections in the list
+function displayConnections(connections, filter = 'all') {
+    const connectionsList = document.getElementById('connectionsList');
+    
+    // Filter connections
+    let filteredConnections = connections;
+    if (filter !== 'all') {
+        filteredConnections = connections.filter(conn => conn.type === filter);
+    }
+    
+    if (filteredConnections.length === 0) {
+        connectionsList.innerHTML = `
+            <div class="no-connections">
+                <i class="fas fa-heart"></i>
+                <h4>${filter === 'all' ? 'No connections yet' : `No ${filter} connections`}</h4>
+                <p>${filter === 'all' ? 
+                    'Start exploring Jewish institutions and programs to build your community network!' :
+                    `You haven't connected with any ${filter} institutions yet.`
+                }</p>
+                <button class="explore-btn" onclick="hideProfilePage()">
+                    <i class="fas fa-search"></i>
+                    Explore Now
+                </button>
+            </div>
+        `;
+        return;
+    }
+    
+    // Sort by connection date (newest first)
+    filteredConnections.sort((a, b) => new Date(b.connectedDate) - new Date(a.connectedDate));
+    
+    connectionsList.innerHTML = filteredConnections.map(connection => `
+        <div class="connection-item">
+            <div class="connection-header">
+                <div>
+                    <div class="connection-name">${connection.name}</div>
+                    <span class="connection-type">${connection.denomination}</span>
+                </div>
+                <div class="connection-date">
+                    Connected: ${new Date(connection.connectedDate).toLocaleDateString()}
+                </div>
+            </div>
+            
+            <div class="connection-address">
+                <i class="fas fa-map-marker-alt"></i>
+                ${connection.address}
+            </div>
+            
+            <div class="connection-actions">
+                <button class="connection-btn primary" onclick="visitConnectionWebsite('${connection.name}')">
+                    <i class="fas fa-external-link-alt"></i> Visit
+                </button>
+                <button class="connection-btn" onclick="contactConnection('${connection.name}')">
+                    <i class="fas fa-phone"></i> Contact
+                </button>
+                <button class="connection-btn" onclick="removeConnection(${connection.id})">
+                    <i class="fas fa-times"></i> Remove
+                </button>
+            </div>
+        </div>
+    `).join('');
+}
+
+// Filter connections by type
+function filterConnections(type) {
+    // Update filter buttons
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    event.target.classList.add('active');
+    
+    // Display filtered connections
+    const connections = getUserConnections();
+    displayConnections(connections, type);
+}
+
+// Visit connection website (placeholder)
+function visitConnectionWebsite(institutionName) {
+    // In a real app, this would open the institution's website
+    // For now, we'll just show a message
+    alert(`Opening website for ${institutionName}...`);
+}
+
+// Contact connection (placeholder)
+function contactConnection(institutionName) {
+    alert(`Contact information for ${institutionName} would be displayed here.`);
+}
+
+// Remove a connection
+function removeConnection(connectionId) {
+    if (!confirm('Are you sure you want to remove this connection?')) {
+        return;
+    }
+    
+    const connections = getUserConnections();
+    const updatedConnections = connections.filter(conn => conn.id !== connectionId);
+    
+    saveUserConnections(updatedConnections);
+    
+    // Update current user's connections count
+    currentUser.connectionsCount = updatedConnections.length;
+    localStorage.setItem('jewishMappedCurrentUser', JSON.stringify(currentUser));
+    
+    // Refresh the connections display
+    loadUserConnections();
+}
+
+// Edit profile (placeholder)
+function editProfile() {
+    alert('Profile editing functionality would be implemented here. This would open a form to edit user information.');
+}
+
+// =============================================================================
+// DATA STORAGE INFORMATION
+// =============================================================================
+
+/*
+USER DATA STORAGE INFORMATION:
+
+All user data is currently stored in the browser's localStorage for demonstration purposes.
+This includes:
+
+1. User Registration Data:
+   - firstName: User's first name
+   - lastName: User's last name  
+   - email: Email address (used for login)
+   - password: Password (stored as plain text for demo - would be hashed in production)
+   - homeAddress: Complete home address
+   - jewishAffiliation: Selected Jewish affiliation
+   - interests: Array of selected interests
+   - otherInterestDetails: Description of other interests (if selected)
+   - registrationDate: When account was created
+   - lastLogin: Last login timestamp
+
+2. Storage Location:
+   - localStorage key: 'jewishMappedUsers' (array of all users)
+   - localStorage key: 'jewishMappedCurrentUser' (currently logged in user)
+
+3. Accessing the Data:
+   - Open browser dev tools (F12)
+   - Go to Application tab > Local Storage
+   - Look for 'jewishMappedUsers' and 'jewishMappedCurrentUser'
+
+4. In Production:
+   - Data would be stored in a secure database (PostgreSQL, MongoDB, etc.)
+   - Passwords would be hashed using bcrypt or similar
+   - User sessions would be managed with JWT tokens or server sessions
+   - Personal data would be encrypted and comply with privacy regulations
+   - Regular backups and data protection measures would be implemented
+
+5. Current Demo Features:
+   - User registration with all requested fields
+   - Login/logout functionality
+   - Data persistence across browser sessions
+   - Form validation
+   - Interest selection with "other" option handling
+*/ 
