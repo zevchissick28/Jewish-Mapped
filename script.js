@@ -4,9 +4,7 @@ let institutionsData = {};
 let allInstitutions = [];
 
 // OpenAI API configuration
-// Note: In production, use environment variables or a secure config file
-// For client-side apps, consider using a backend proxy to hide the API key
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY || 'YOUR_API_KEY_HERE'; // Set your OpenAI API key in environment variables
+const OPENAI_API_KEY = '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'; // Your OpenAI API key
 const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions';
 
 // Load the JSON data
@@ -58,9 +56,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     clearAISearchInput();
                 }
                 
-                // Clear zip code input when switching away from zip code tab
-                if (currentTabId === 'zipcode' && tabId !== 'zipcode') {
-                    clearZipcodeInput();
+                // Clear customize search inputs when switching away from customize search tab
+                if (currentTabId === 'filtration' && tabId !== 'filtration') {
+                    clearFiltrationInputs();
+                    resetFiltrationSteps();
                 }
             }
             
@@ -85,13 +84,15 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
-    // Zipcode search enter key
-    const zipcodeInput = document.getElementById('zipcodeInput');
-    zipcodeInput.addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') {
-            searchByZipcode();
-        }
-    });
+    // Customize search zipcode search enter key
+    const filtrationZipcodeInput = document.getElementById('filtrationZipcodeInput');
+    if (filtrationZipcodeInput) {
+        filtrationZipcodeInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                searchByFiltration();
+            }
+        });
+    }
 });
 
 // AI Search Handler with OpenAI integration
@@ -177,7 +178,9 @@ JSON format required:
 
 Requirements:
 - Provide real, existing institutions only
-- Include synagogues, temples, Jewish community centers, Hillel houses, Jewish schools
+- Include synagogues, temples, Jewish community centers, Jewish schools
+- EXCLUDE college/university Hillel houses for youth programs (Bar/Bat Mitzvah, Hebrew School, Youth Groups)
+- EXCLUDE institutions that primarily serve adults (18+) when youth programs are requested
 - Return 8-12 institutions when possible
 - Prioritize institutions in specified locations
 - All information must be accurate to your knowledge
@@ -374,9 +377,22 @@ async function searchLocalDatabaseWithAI(query) {
              return [];
          }
          
-         // Score the proximity-filtered results
-         potentialResults.forEach(institution => {
-            let score = 20; // Base score for being in the right location
+                 // Score the proximity-filtered results
+        potentialResults.forEach(institution => {
+           // Filter out college/university Hillels for youth programs
+           const institutionName = institution['Synagogue Name'] || '';
+           const isCollegeHillel = institutionName.toLowerCase().includes('hillel') && 
+                                  (institutionName.toLowerCase().includes('university') || 
+                                   institutionName.toLowerCase().includes('college'));
+           
+           const youthKeywords = ['bar mitzvah', 'bat mitzvah', 'bnai mitzvah', 'b\'nai mitzvah', 'hebrew school', 'youth group', 'children', 'kids', 'teen'];
+           const isYouthQuery = youthKeywords.some(keyword => queryLower.includes(keyword));
+           
+           if (isYouthQuery && isCollegeHillel) {
+               return; // Skip this institution
+           }
+           
+           let score = 20; // Base score for being in the right location
             
             // Extract key search terms from the query (excluding location terms)
             const searchTerms = extractSearchTerms(query).filter(term => 
@@ -891,9 +907,9 @@ function simulateAISearch(query) {
         .map(result => result.institution);
 }
 
-// Search by zipcode and nearby areas
+// Search by zipcode and nearby areas (legacy function)
 function searchByZipcode() {
-    const zipcode = document.getElementById('zipcodeInput').value.trim();
+    const zipcode = document.getElementById('zipcodeInput') ? document.getElementById('zipcodeInput').value.trim() : '';
     if (!zipcode) return;
     
     showLoading();
@@ -1643,7 +1659,7 @@ function clearAISearchInput() {
     }
 }
 
-// Clear the zip code input field
+// Clear the zip code input field (legacy)
 function clearZipcodeInput() {
     const zipcodeInput = document.getElementById('zipcodeInput');
     if (zipcodeInput) {
@@ -1656,6 +1672,8 @@ function clearZipcodeInput() {
 function clearAllSearchInputs() {
     clearAISearchInput();
     clearZipcodeInput();
+    clearFiltrationInputs();
+    resetFiltrationSteps();
 }
 
 // Load user profile data into the profile page
@@ -1885,6 +1903,558 @@ function editProfile() {
 }
 
 // =============================================================================
+// CUSTOMIZE SEARCH FUNCTIONALITY
+// =============================================================================
+
+let selectedCategory = null;
+
+// Select a category and move to zip code step
+function selectCategory(category) {
+    selectedCategory = category;
+    
+    // Update display
+    const categoryDisplay = document.getElementById('selectedCategoryDisplay');
+    categoryDisplay.textContent = getCategoryDisplayName(category);
+    
+    // Hide category step and show zip code step
+    document.getElementById('category-step').classList.remove('active');
+    document.getElementById('zipcode-step').style.display = 'block';
+    
+    // Focus on the zip code input
+    const zipcodeInput = document.getElementById('filtrationZipcodeInput');
+    setTimeout(() => zipcodeInput.focus(), 100);
+}
+
+// Go back to category selection
+function goBackToCategory() {
+    selectedCategory = null;
+    
+    // Clear zip code input
+    document.getElementById('filtrationZipcodeInput').value = '';
+    
+    // Show category step and hide zip code step
+    document.getElementById('category-step').classList.add('active');
+    document.getElementById('zipcode-step').style.display = 'none';
+}
+
+// Search using customize search system (category + zip code)
+function searchByFiltration() {
+    const zipcode = document.getElementById('filtrationZipcodeInput').value.trim();
+    
+    if (!selectedCategory) {
+        alert('Please select a category first.');
+        goBackToCategory();
+        return;
+    }
+    
+    if (!zipcode) {
+        alert('Please enter a zip code.');
+        return;
+    }
+    
+    showLoading();
+    
+    setTimeout(() => {
+        // Get results by category
+        const categoryResults = getCategoryResults(selectedCategory);
+        
+        // Filter by location if zip code is provided
+        const locationFilteredResults = filterResultsByLocation(categoryResults, zipcode);
+        
+        const title = `${getCategoryDisplayName(selectedCategory)} Results in ${zipcode} Area`;
+        displayResults(locationFilteredResults, title);
+        hideLoading();
+        scrollToResults();
+    }, 500);
+}
+
+// Get results for a specific category
+function getCategoryResults(category) {
+    switch(category) {
+        case 'synagogue':
+            return allInstitutions.filter(inst => 
+                inst['Synagogue Name'] && 
+                !inst['Synagogue Name'].toLowerCase().includes('hillel')
+            );
+        case 'school':
+            return allInstitutions.filter(inst => {
+                const programs = inst['Educational Programs'];
+                return programs && programs['Hebrew School'] && 
+                       programs['Hebrew School'].toLowerCase().includes('yes');
+            });
+        case 'youth':
+            return allInstitutions.filter(inst => {
+                const programs = inst['Educational Programs'];
+                const hasYouthPrograms = programs && programs['Youth Groups'] && 
+                                       programs['Youth Groups'].toLowerCase().includes('yes');
+                const hasHebrewSchool = programs && programs['Hebrew School'] && 
+                                      programs['Hebrew School'].toLowerCase().includes('yes');
+                
+                // Only show if has youth programs BUT NOT if it's primarily a Hebrew School
+                return hasYouthPrograms && !hasHebrewSchool;
+            });
+        case 'education':
+            return allInstitutions.filter(inst => {
+                const programs = inst['Educational Programs'];
+                return programs && programs['Adult Education'] && 
+                       programs['Adult Education'].toLowerCase().includes('yes');
+            });
+        case 'hillel':
+            return allInstitutions.filter(inst => 
+                inst['Synagogue Name'].toLowerCase().includes('hillel')
+            );
+        case 'community':
+            return allInstitutions.filter(inst => {
+                const programs = inst['Educational Programs'];
+                return programs && programs['Family and Intergenerational Learning'] && 
+                       programs['Family and Intergenerational Learning'].toLowerCase().includes('yes');
+            });
+        default:
+            return [];
+    }
+}
+
+// Filter results by location (zip code proximity)
+function filterResultsByLocation(results, zipcode) {
+    const searchZipNum = parseInt(zipcode);
+    const locationFilteredResults = [];
+    
+    // First, add exact matches
+    results.forEach(inst => {
+        if (inst.zipCode === zipcode) {
+            locationFilteredResults.push({ ...inst, distance: 0 });
+        }
+    });
+    
+    // Then add nearby zip codes
+    results.forEach(inst => {
+        const instZipNum = parseInt(inst.zipCode);
+        if (instZipNum && inst.zipCode !== zipcode) {
+            const distance = Math.abs(instZipNum - searchZipNum);
+            if (distance <= 50) { // Within 50 zip code numbers
+                locationFilteredResults.push({ ...inst, distance: distance });
+            }
+        }
+    });
+    
+    // Sort by distance and limit results
+    locationFilteredResults.sort((a, b) => a.distance - b.distance);
+    return locationFilteredResults.slice(0, 20);
+}
+
+// Get display name for category
+function getCategoryDisplayName(category) {
+    const categoryNames = {
+        'synagogue': 'Synagogues',
+        'school': 'Jewish Schools',
+        'youth': 'Youth Programs',
+        'education': 'Adult Education',
+        'hillel': 'Campus Hillel',
+        'community': 'Community Programs'
+    };
+    return categoryNames[category] || category;
+}
+
+// Reset customize search steps to initial state
+function resetFiltrationSteps() {
+    selectedCategory = null;
+    document.getElementById('category-step').classList.add('active');
+    document.getElementById('zipcode-step').style.display = 'none';
+}
+
+// Clear customize search inputs
+function clearFiltrationInputs() {
+    const filtrationZipcodeInput = document.getElementById('filtrationZipcodeInput');
+    if (filtrationZipcodeInput) {
+        filtrationZipcodeInput.value = '';
+    }
+}
+
+// =============================================================================
+// LEGACY SEARCH FUNCTIONS (Updated for compatibility)
+// =============================================================================
+
+// Search by zipcode and nearby areas
+function searchByZipcode() {
+    const zipcode = document.getElementById('zipcodeInput').value.trim();
+    if (!zipcode) return;
+    
+    showLoading();
+    
+    setTimeout(() => {
+        const results = findNearbyZipCodes(zipcode);
+        displayResults(results, `Results for ${zipcode} and nearby areas`);
+        hideLoading();
+        scrollToResults();
+    }, 500);
+}
+
+// Find institutions in the searched zip code and nearby zip codes
+function findNearbyZipCodes(searchZip) {
+    const results = [];
+    const searchZipNum = parseInt(searchZip);
+    
+    // First, add exact match if it exists
+    if (institutionsData[searchZip]) {
+        institutionsData[searchZip].forEach(inst => {
+            results.push({ ...inst, zipCode: searchZip, distance: 0 });
+        });
+    }
+    
+    // Then find nearby zip codes (within a reasonable range)
+    const nearbyZips = [];
+    
+    for (const zipCode in institutionsData) {
+        const zipNum = parseInt(zipCode);
+        if (zipNum && Math.abs(zipNum - searchZipNum) <= 50) { // Within 50 zip code numbers
+            nearbyZips.push(zipCode);
+        }
+    }
+    
+    // Add results from nearby zip codes
+    nearbyZips.forEach(zipCode => {
+        if (zipCode !== searchZip) { // Don't duplicate exact match
+            institutionsData[zipCode].forEach(inst => {
+                const distance = Math.abs(parseInt(zipCode) - searchZipNum);
+                results.push({ ...inst, zipCode: zipCode, distance: distance });
+            });
+        }
+    });
+    
+    // Sort by distance (exact match first, then by proximity)
+    results.sort((a, b) => a.distance - b.distance);
+    
+    // Limit to reasonable number of results
+    return results.slice(0, 20);
+}
+
+// Search by category
+function searchByCategory(category) {
+    showLoading();
+    
+    setTimeout(() => {
+        let results = [];
+        
+        switch(category) {
+            case 'synagogue':
+                results = allInstitutions.filter(inst => 
+                    inst['Synagogue Name'] && 
+                    !inst['Synagogue Name'].toLowerCase().includes('hillel')
+                );
+                break;
+            case 'school':
+                results = allInstitutions.filter(inst => {
+                    const programs = inst['Educational Programs'];
+                    return programs && programs['Hebrew School'] && 
+                           programs['Hebrew School'].toLowerCase().includes('yes');
+                });
+                break;
+            case 'youth':
+                results = allInstitutions.filter(inst => {
+                    const programs = inst['Educational Programs'];
+                    const hasYouthPrograms = programs && programs['Youth Groups'] && 
+                                           programs['Youth Groups'].toLowerCase().includes('yes');
+                    const hasHebrewSchool = programs && programs['Hebrew School'] && 
+                                          programs['Hebrew School'].toLowerCase().includes('yes');
+                    
+                    // Only show if has youth programs BUT NOT if it's primarily a Hebrew School
+                    return hasYouthPrograms && !hasHebrewSchool;
+                });
+                break;
+            case 'education':
+                results = allInstitutions.filter(inst => {
+                    const programs = inst['Educational Programs'];
+                    return programs && programs['Adult Education'] && 
+                           programs['Adult Education'].toLowerCase().includes('yes');
+                });
+                break;
+            case 'hillel':
+                results = allInstitutions.filter(inst => 
+                    inst['Synagogue Name'].toLowerCase().includes('hillel')
+                );
+                break;
+            case 'community':
+                results = allInstitutions.filter(inst => {
+                    const programs = inst['Educational Programs'];
+                    return programs && programs['Family and Intergenerational Learning'] && 
+                           programs['Family and Intergenerational Learning'].toLowerCase().includes('yes');
+                });
+                break;
+        }
+        
+        displayResults(results.slice(0, 20), `${category.charAt(0).toUpperCase() + category.slice(1)} Results`);
+        hideLoading();
+        scrollToResults();
+    }, 500);
+}
+
+// Search by affiliation
+function searchByAffiliation(affiliation) {
+    showLoading();
+    
+    setTimeout(() => {
+        const results = allInstitutions.filter(inst => 
+            inst.Denomination && 
+            inst.Denomination.toLowerCase().includes(affiliation.toLowerCase())
+        );
+        
+        displayResults(results.slice(0, 20), `${affiliation} Institutions`);
+        hideLoading();
+        scrollToResults();
+    }, 500);
+}
+
+// Display results
+function displayResults(results, title) {
+    const searchResults = document.getElementById('searchResults');
+    const resultsGrid = document.getElementById('resultsGrid');
+    const resultsTitle = document.getElementById('resultsTitle');
+    
+    if (results.length === 0) {
+        resultsGrid.innerHTML = `
+            <div style="grid-column: 1 / -1; text-align: center; padding: 2rem;">
+                <h3>No results found</h3>
+                <p>Try adjusting your search criteria or try a different search term.</p>
+            </div>
+        `;
+    } else {
+        resultsGrid.innerHTML = results.map(createInstitutionCard).join('');
+    }
+    
+    // Update title - hide if empty
+    if (resultsTitle) {
+        if (title && title.trim()) {
+            resultsTitle.textContent = title;
+            resultsTitle.style.display = 'block';
+        } else {
+            resultsTitle.style.display = 'none';
+        }
+    }
+    searchResults.style.display = 'block';
+}
+
+// Create institution card HTML
+function createInstitutionCard(institution) {
+    const programs = institution['Educational Programs'] || {};
+    const availablePrograms = [];
+    
+    // Extract available programs
+    for (const program in programs) {
+        if (programs[program].toLowerCase().includes('yes')) {
+            availablePrograms.push(program);
+        }
+    }
+    
+    return `
+        <div class="institution-card">
+            <div class="card-header">
+                <div class="card-title">${institution['Synagogue Name']}</div>
+                <div class="card-denomination">${institution.Denomination || 'N/A'}</div>
+            </div>
+            <div class="card-body">
+                <div class="card-address">
+                    <i class="fas fa-map-marker-alt"></i>
+                    ${institution['Full Address']}
+                </div>
+                ${institution['Phone Number'] ? `
+                    <div class="card-phone">
+                        <i class="fas fa-phone"></i>
+                        ${institution['Phone Number']}
+                    </div>
+                ` : ''}
+                
+                ${availablePrograms.length > 0 ? `
+                    <div class="card-programs">
+                        <strong>Available Programs:</strong><br>
+                        ${availablePrograms.slice(0, 4).map(program => 
+                            `<span class="program-tag">${program}</span>`
+                        ).join('')}
+                        ${availablePrograms.length > 4 ? `<span class="program-tag">+${availablePrograms.length - 4} more</span>` : ''}
+                    </div>
+                ` : ''}
+                
+                ${institution.Website ? `
+                    <div class="card-website">
+                        <a href="${institution.Website}" target="_blank" class="website-btn">
+                            <i class="fas fa-external-link-alt"></i> Visit Website
+                        </a>
+                    </div>
+                ` : ''}
+                
+                ${institution['AI_Description'] ? `
+                    <div class="card-description">
+                        <strong>About:</strong><br>
+                        <p style="color: #6b7280; font-size: 14px; margin-top: 8px; line-height: 1.4;">
+                            ${institution['AI_Description'].substring(0, 200)}${institution['AI_Description'].length > 200 ? '...' : ''}
+                        </p>
+                    </div>
+                ` : ''}
+                
+                ${institution['Source'] === 'AI Web Search' ? `
+                    <div style="margin-top: 12px; padding: 8px; background: #e0f2fe; border-radius: 6px; border-left: 3px solid #0288d1;">
+                        <div style="display: flex; align-items: center; gap: 6px; color: #0288d1; font-size: 12px; font-weight: 600;">
+                            <i class="fas fa-robot"></i>
+                            AI Web Search Result
+                        </div>
+                    </div>
+                ` : ''}
+                
+                ${institution['Source'] === 'Local Database' ? `
+                    <div style="margin-top: 12px; padding: 8px; background: #f0f9f0; border-radius: 6px; border-left: 3px solid #4caf50;">
+                        <div style="display: flex; align-items: center; gap: 6px; color: #388e3c; font-size: 12px; font-weight: 600;">
+                            <i class="fas fa-database"></i>
+                            Local Database Match
+                        </div>
+                    </div>
+                ` : ''}
+                
+                <div class="card-actions">
+                    <button class="connect-btn" onclick="connectToInstitution('${institution['Synagogue Name'].replace(/'/g, "\\'")}', '${institution.Denomination || 'N/A'}', '${institution['Full Address'].replace(/'/g, "\\'")}', '${getInstitutionType(institution)}')">
+                        <i class="fas fa-plus"></i> Connect
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+// Load recommendations based on cookies/preferences (simulated)
+function loadRecommendations() {
+    if (allInstitutions.length === 0) return;
+    
+    // Simulate user preferences based on "cookies"
+    const userPreferences = getUserPreferences();
+    let recommendations = [];
+    
+    // Generate recommendations based on preferences
+    if (userPreferences.includes('family')) {
+        recommendations.push(...allInstitutions.filter(inst => {
+            const programs = inst['Educational Programs'];
+            return programs && programs['Family and Intergenerational Learning'] && 
+                   programs['Family and Intergenerational Learning'].toLowerCase().includes('yes');
+        }).slice(0, 2));
+    }
+    
+    if (userPreferences.includes('youth')) {
+        recommendations.push(...allInstitutions.filter(inst => {
+            const programs = inst['Educational Programs'];
+            return programs && programs['Youth Groups'] && 
+                   programs['Youth Groups'].toLowerCase().includes('yes');
+        }).slice(0, 2));
+    }
+    
+    if (userPreferences.includes('education')) {
+        recommendations.push(...allInstitutions.filter(inst => {
+            const programs = inst['Educational Programs'];
+            return programs && programs['Adult Education'] && 
+                   programs['Adult Education'].toLowerCase().includes('yes');
+        }).slice(0, 2));
+    }
+    
+    // If no specific preferences, show diverse institutions
+    if (recommendations.length === 0) {
+        // Get a mix of different denominations and programs
+        const denominations = ['Reform', 'Conservative', 'Orthodox', 'Chabad'];
+        denominations.forEach(denom => {
+            const inst = allInstitutions.find(i => 
+                i.Denomination && i.Denomination.includes(denom)
+            );
+            if (inst) recommendations.push(inst);
+        });
+    }
+    
+    // Remove duplicates and limit to 6
+    recommendations = [...new Set(recommendations)].slice(0, 6);
+    
+    // Display recommendations
+    const recommendationsGrid = document.getElementById('recommendationsGrid');
+    recommendationsGrid.innerHTML = recommendations.map(createInstitutionCard).join('');
+}
+
+// Simulate getting user preferences from cookies
+function getUserPreferences() {
+    // In a real app, this would read from actual cookies or user profile
+    const preferences = localStorage.getItem('userPreferences');
+    if (preferences) {
+        return JSON.parse(preferences);
+    }
+    
+    // Default preferences for demo
+    const defaultPrefs = ['family', 'education', 'youth'];
+    localStorage.setItem('userPreferences', JSON.stringify(defaultPrefs));
+    return defaultPrefs;
+}
+
+// Utility functions
+function showLoading() {
+    document.getElementById('loadingSpinner').style.display = 'flex';
+}
+
+function hideLoading() {
+    document.getElementById('loadingSpinner').style.display = 'none';
+}
+
+function scrollToResults() {
+    document.getElementById('searchResults').scrollIntoView({ 
+        behavior: 'smooth',
+        block: 'start'
+    });
+}
+
+// Update user preferences (for future enhancement)
+function updateUserPreferences(newPreferences) {
+    localStorage.setItem('userPreferences', JSON.stringify(newPreferences));
+    loadRecommendations(); // Refresh recommendations
+}
+
+// Enhanced search with geolocation (for future enhancement)
+function searchNearMe() {
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(function(position) {
+            const lat = position.coords.latitude;
+            const lon = position.coords.longitude;
+            
+            // In a real app, you would use a geocoding service to find nearby zip codes
+            // For now, we'll just show a selection of institutions
+            const sampleResults = allInstitutions.slice(0, 10);
+            displayResults(sampleResults, 'Institutions Near You');
+            scrollToResults();
+        });
+    }
+}
+
+// Initialize search suggestions (for future enhancement)
+function initializeSearchSuggestions() {
+    const aiSearchInput = document.getElementById('aiSearchInput');
+    
+    // Create a datalist for suggestions
+    const datalist = document.createElement('datalist');
+    datalist.id = 'searchSuggestions';
+    
+    const suggestions = [
+        'Orthodox synagogue with youth programs',
+        'Reform temple with Hebrew school',
+        'Conservative synagogue near me',
+        'Chabad house with family programs',
+        'Jewish day school',
+        'Hillel at university',
+        'Synagogue with online services',
+        'Jewish community center',
+        'Adult education classes',
+        'Bar/Bat Mitzvah preparation'
+    ];
+    
+    suggestions.forEach(suggestion => {
+        const option = document.createElement('option');
+        option.value = suggestion;
+        datalist.appendChild(option);
+    });
+    
+    document.body.appendChild(datalist);
+    aiSearchInput.setAttribute('list', 'searchSuggestions');
+}
+
+// =============================================================================
 // DATA STORAGE INFORMATION
 // =============================================================================
 
@@ -1928,4 +2498,417 @@ This includes:
    - Data persistence across browser sessions
    - Form validation
    - Interest selection with "other" option handling
-*/ 
+*/
+
+// =============================================================================
+// ENHANCED RESULTS DISPLAY AND CONTROLS FOR ZILLOW-LIKE LAYOUT
+// =============================================================================
+
+// Initialize results controls (sort, filter, etc.)
+function initializeResultsControls(results) {
+    // Initialize filter toggle
+    const filterToggle = document.getElementById('filterToggle');
+    const filterPanel = document.getElementById('filterPanel');
+    
+    if (filterToggle && filterPanel) {
+        filterToggle.onclick = function() {
+            const isVisible = filterPanel.style.display !== 'none';
+            filterPanel.style.display = isVisible ? 'none' : 'block';
+            filterToggle.classList.toggle('active', !isVisible);
+        };
+    }
+    
+    // Initialize sort functionality
+    const sortSelect = document.getElementById('sortSelect');
+    if (sortSelect) {
+        sortSelect.onchange = function() {
+            sortResults(this.value);
+        };
+    }
+    
+    // Initialize map controls
+    initializeMapControls();
+    
+    // Initialize filter checkboxes
+    const filterCheckboxes = document.querySelectorAll('.filter-checkboxes input[type="checkbox"]');
+    filterCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', applyFilters);
+    });
+}
+
+// Sort results based on selected criteria
+function sortResults(criteria) {
+    const resultsGrid = document.getElementById('resultsGrid');
+    const cards = Array.from(resultsGrid.children);
+    
+    if (cards.length === 0) return;
+    
+    cards.sort((a, b) => {
+        const aTitle = a.querySelector('.card-title')?.textContent || '';
+        const bTitle = b.querySelector('.card-title')?.textContent || '';
+        const aDenom = a.querySelector('.card-denomination')?.textContent || '';
+        const bDenom = b.querySelector('.card-denomination')?.textContent || '';
+        
+        switch (criteria) {
+            case 'name':
+                return aTitle.localeCompare(bTitle);
+            case 'denomination':
+                return aDenom.localeCompare(bDenom) || aTitle.localeCompare(bTitle);
+            case 'distance':
+                // For now, just sort by name since we don't have distance data
+                return aTitle.localeCompare(bTitle);
+            case 'relevance':
+            default:
+                // Keep original order for relevance
+                return 0;
+        }
+    });
+    
+    // Re-append sorted cards
+    cards.forEach(card => resultsGrid.appendChild(card));
+}
+
+// Initialize map controls
+function initializeMapControls() {
+    const zoomInBtn = document.getElementById('zoomIn');
+    const zoomOutBtn = document.getElementById('zoomOut');
+    const centerMapBtn = document.getElementById('centerMap');
+    
+    if (zoomInBtn) {
+        zoomInBtn.onclick = function() {
+            console.log('Zoom in clicked');
+            // Map zoom in functionality would go here
+        };
+    }
+    
+    if (zoomOutBtn) {
+        zoomOutBtn.onclick = function() {
+            console.log('Zoom out clicked');
+            // Map zoom out functionality would go here
+        };
+    }
+    
+    if (centerMapBtn) {
+        centerMapBtn.onclick = function() {
+            console.log('Center map clicked');
+            // Map center functionality would go here
+        };
+    }
+}
+
+// Filter results based on selected filters
+function applyFilters() {
+    const denominationFilters = Array.from(document.querySelectorAll('.filter-checkboxes input[value="reform"]:checked, .filter-checkboxes input[value="conservative"]:checked, .filter-checkboxes input[value="orthodox"]:checked, .filter-checkboxes input[value="chabad"]:checked, .filter-checkboxes input[value="reconstructionist"]:checked')).map(cb => cb.value);
+    const programFilters = Array.from(document.querySelectorAll('.filter-checkboxes input[value="youth"]:checked, .filter-checkboxes input[value="hebrew"]:checked, .filter-checkboxes input[value="adult"]:checked, .filter-checkboxes input[value="family"]:checked')).map(cb => cb.value);
+    
+    const cards = document.querySelectorAll('.institution-card');
+    
+    cards.forEach(card => {
+        let showCard = true;
+        
+        // Check denomination filters
+        if (denominationFilters.length > 0) {
+            const cardDenom = card.querySelector('.card-denomination')?.textContent?.toLowerCase() || '';
+            const matchesDenom = denominationFilters.some(filter => cardDenom.includes(filter));
+            if (!matchesDenom) showCard = false;
+        }
+        
+        // Check program filters
+        if (programFilters.length > 0 && showCard) {
+            const programTags = Array.from(card.querySelectorAll('.program-tag')).map(tag => tag.textContent.toLowerCase());
+            const matchesProgram = programFilters.some(filter => {
+                switch (filter) {
+                    case 'youth':
+                        return programTags.some(tag => tag.includes('youth') || tag.includes('children'));
+                    case 'hebrew':
+                        return programTags.some(tag => tag.includes('hebrew') || tag.includes('school'));
+                    case 'adult':
+                        return programTags.some(tag => tag.includes('adult') || tag.includes('education'));
+                    case 'family':
+                        return programTags.some(tag => tag.includes('family') || tag.includes('intergenerational'));
+                    default:
+                        return false;
+                }
+            });
+            if (!matchesProgram) showCard = false;
+        }
+        
+        card.style.display = showCard ? 'block' : 'none';
+    });
+    
+    // Update results count
+    const visibleCards = document.querySelectorAll('.institution-card:not([style*="display: none"])');
+    const resultsCount = document.getElementById('resultsCount');
+    if (resultsCount) {
+        resultsCount.textContent = `${visibleCards.length} result${visibleCards.length !== 1 ? 's' : ''} shown`;
+    }
+}
+
+// Enhanced display results function override
+let currentResults = [];
+
+// Override the existing displayResults function
+const originalDisplayResults = window.displayResults || function() {};
+window.displayResults = function(results, title) {
+    currentResults = results || [];
+    
+    console.log('🔍 DisplayResults called with:', {
+        resultCount: results.length,
+        title: title,
+        firstResult: results[0],
+        resultTypes: results.map(r => r.Source || 'Local DB')
+    });
+    
+    const searchResults = document.getElementById('searchResults');
+    const resultsGrid = document.getElementById('resultsGrid');
+    const resultsTitle = document.getElementById('resultsTitle');
+    const resultsCount = document.getElementById('resultsCount');
+    
+    if (results.length === 0) {
+        resultsGrid.innerHTML = `
+            <div style="text-align: center; padding: 2rem; color: #6b7280;">
+                <i class="fas fa-search" style="font-size: 48px; margin-bottom: 16px; color: #d1d5db;"></i>
+                <h3 style="margin-bottom: 8px; color: #374151;">No results found</h3>
+                <p>Try adjusting your search criteria or try a different search term.</p>
+            </div>
+        `;
+        if (resultsCount) {
+            resultsCount.textContent = '';
+        }
+        // Initialize empty map
+        console.log('🗺️ Initializing empty map (no results)');
+        if (window.initializeMapForResults) {
+            window.initializeMapForResults([]);
+        }
+    } else {
+        resultsGrid.innerHTML = results.map(createInstitutionCard).join('');
+        if (resultsCount) {
+            resultsCount.textContent = `${results.length} result${results.length !== 1 ? 's' : ''} found`;
+        }
+    }
+    
+    // Update title
+    if (resultsTitle) {
+        if (title && title.trim()) {
+            resultsTitle.textContent = title;
+        } else {
+            resultsTitle.textContent = 'Search Results';
+        }
+    }
+    
+            // Initialize controls and map
+        setTimeout(() => {
+            console.log('🔧 Initializing results controls...');
+            initializeResultsControls(results);
+            
+            // Force map initialization with detailed logging
+            console.log('🗺️ About to initialize map with results:', {
+                count: results.length,
+                addresses: results.map(r => r['Full Address']).slice(0, 3),
+                hasMapFunction: !!window.initializeMapForResults,
+                firstResult: results[0]
+            });
+            
+                    // Initialize interactive Leaflet map with real locations
+        console.log('🚀 Initializing interactive map with real locations...');
+        initializeInteractiveMap(results);
+        }, 200);
+    
+    searchResults.style.display = 'block';
+};
+
+// Interactive map functionality
+let interactiveMap = null;
+let mapMarkers = [];
+
+// Initialize interactive map with real geocoding
+async function initializeInteractiveMap(institutions) {
+    console.log('🗺️ Starting interactive map initialization...');
+    const mapContainer = document.getElementById('map');
+    const loadingMessage = document.getElementById('loading-message');
+    
+    if (!mapContainer) {
+        console.error('❌ Map container not found');
+        return;
+    }
+    
+    // Clear container and ensure Leaflet is available
+    if (typeof L === 'undefined') {
+        console.error('❌ Leaflet not loaded');
+        mapContainer.innerHTML = `
+            <div style="display: flex; align-items: center; justify-content: center; height: 100%; flex-direction: column; color: #dc2626;">
+                <i class="fas fa-exclamation-triangle" style="font-size: 32px; margin-bottom: 12px;"></i>
+                <p>Map library not available</p>
+            </div>
+        `;
+        return;
+    }
+    
+    try {
+        // Clear existing map
+        if (interactiveMap) {
+            interactiveMap.remove();
+            interactiveMap = null;
+        }
+        
+        // Clear container
+        mapContainer.innerHTML = '';
+        
+        // Initialize map
+        interactiveMap = L.map(mapContainer, {
+            zoomControl: true,
+            scrollWheelZoom: true,
+            doubleClickZoom: true,
+            touchZoom: true
+        });
+        
+        // Add tile layer
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(interactiveMap);
+        
+        console.log('✅ Base map created');
+        
+        if (!institutions || institutions.length === 0) {
+            // Set default view to US
+            interactiveMap.setView([39.8283, -98.5795], 4);
+            console.log('📍 No institutions - showing default US view');
+            return;
+        }
+        
+        // Clear existing markers
+        mapMarkers.forEach(marker => interactiveMap.removeLayer(marker));
+        mapMarkers = [];
+        
+        console.log(`🔍 Geocoding ${institutions.length} institutions...`);
+        
+        // Process institutions with real geocoding
+        const bounds = [];
+        const processedInstitutions = institutions.slice(0, 10);
+        
+        for (let i = 0; i < processedInstitutions.length; i++) {
+            const inst = processedInstitutions[i];
+            try {
+                const coords = await geocodeAddress(inst['Full Address'] || '');
+                if (coords) {
+                    bounds.push(coords);
+                    
+                    // Create marker
+                    const marker = L.marker(coords, {
+                        icon: L.divIcon({
+                            className: 'custom-map-marker',
+                            html: `<div style="
+                                width: 25px; 
+                                height: 25px; 
+                                background: #3b82f6; 
+                                border: 3px solid white; 
+                                border-radius: 50%; 
+                                box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+                                display: flex;
+                                align-items: center;
+                                justify-content: center;
+                            ">
+                                <i class="fas fa-star" style="color: white; font-size: 10px;"></i>
+                            </div>`,
+                            iconSize: [31, 31],
+                            iconAnchor: [15, 15]
+                        })
+                    }).addTo(interactiveMap);
+                    
+                    // Add popup
+                    marker.bindPopup(`
+                        <div style="min-width: 200px;">
+                            <h4 style="margin: 0 0 8px 0; color: #1f2937;">${inst['Synagogue Name'] || 'Institution'}</h4>
+                            <p style="margin: 4px 0; font-weight: bold; color: #3b82f6;">${inst.Denomination || 'N/A'}</p>
+                            <p style="margin: 4px 0; font-size: 14px; color: #6b7280;">${inst['Full Address'] || 'Address not available'}</p>
+                            ${inst['Phone Number'] ? `<p style="margin: 4px 0; font-size: 14px;"><i class="fas fa-phone"></i> ${inst['Phone Number']}</p>` : ''}
+                        </div>
+                    `);
+                    
+                    mapMarkers.push(marker);
+                    console.log(`✅ Added marker for ${inst['Synagogue Name']}`);
+                }
+                
+                // Small delay to be respectful to geocoding service
+                if (i < processedInstitutions.length - 1) {
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                }
+                
+            } catch (error) {
+                console.warn(`⚠️ Failed to geocode ${inst['Synagogue Name']}:`, error);
+            }
+        }
+        
+        // Fit map to markers
+        if (bounds.length > 0) {
+            if (bounds.length === 1) {
+                interactiveMap.setView(bounds[0], 14);
+                console.log('📍 Single location - zoomed to level 14');
+            } else {
+                const group = new L.featureGroup(mapMarkers);
+                interactiveMap.fitBounds(group.getBounds(), {
+                    padding: [20, 20],
+                    maxZoom: 13
+                });
+                console.log(`📍 Multiple locations - fitted bounds for ${bounds.length} markers`);
+            }
+        } else {
+            // No valid coordinates - show US
+            interactiveMap.setView([39.8283, -98.5795], 4);
+            console.log('⚠️ No valid coordinates - showing US view');
+        }
+        
+        // Force map refresh
+        setTimeout(() => {
+            if (interactiveMap) {
+                interactiveMap.invalidateSize();
+            }
+        }, 100);
+        
+        console.log(`🎯 Interactive map ready with ${mapMarkers.length} markers`);
+        
+    } catch (error) {
+        console.error('❌ Map initialization failed:', error);
+        mapContainer.innerHTML = `
+            <div style="display: flex; align-items: center; justify-content: center; height: 100%; flex-direction: column; color: #dc2626;">
+                <i class="fas fa-exclamation-triangle" style="font-size: 32px; margin-bottom: 12px;"></i>
+                <p>Failed to load interactive map</p>
+                <small>Please refresh the page</small>
+            </div>
+        `;
+    }
+}
+
+// Simple geocoding function
+async function geocodeAddress(address) {
+    if (!address || address.trim() === '') {
+        return null;
+    }
+    
+    try {
+        const response = await fetch(
+            `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&limit=1`
+        );
+        const data = await response.json();
+        
+        if (data && data.length > 0) {
+            const lat = parseFloat(data[0].lat);
+            const lon = parseFloat(data[0].lon);
+            if (!isNaN(lat) && !isNaN(lon)) {
+                return [lat, lon];
+            }
+        }
+        return null;
+    } catch (error) {
+        console.warn('Geocoding error:', error);
+        return null;
+    }
+}
+
+window.mapWorking = false;
+// Force refresh Mon Sep 29 15:21:17 EDT 2025
+
+console.log('🗺️ Interactive map functions loaded - duplicates removed');
+// Force refresh Mon Sep 29 15:31:11 EDT 2025
+// FIXED JavaScript syntax errors Mon Sep 29 15:37:08 EDT 2025

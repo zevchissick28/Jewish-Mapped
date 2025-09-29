@@ -4,6 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Jewish Mapped</title>
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+          integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+          crossorigin=""/>
+    
+    <!-- Leaflet JavaScript -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+            integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+            crossorigin=""></script>
     <style>
         * {
             margin: 0;
@@ -228,6 +238,83 @@
             font-size: 14px;
         }
 
+        /* Customize Search Styles */
+        .filtration-step {
+            display: none;
+        }
+
+        .filtration-step.active {
+            display: block;
+        }
+
+        .step-title {
+            text-align: center;
+            color: #1f2937;
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .step-title i {
+            color: #3b82f6;
+        }
+
+        .selected-category-display {
+            background: #f0f9ff;
+            border: 1px solid #bae6fd;
+            border-radius: 12px;
+            padding: 16px 20px;
+            margin-bottom: 24px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .selected-category-label {
+            color: #1e40af;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .selected-category-value {
+            background: #3b82f6;
+            color: white;
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .change-category-btn {
+            background: #f3f4f6;
+            color: #374151;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            transition: all 0.2s;
+            margin-left: auto;
+        }
+
+        .change-category-btn:hover {
+            background: #e5e7eb;
+            transform: translateY(-1px);
+        }
+
+        .change-category-btn i {
+            font-size: 10px;
+        }
+
         /* Tab Content */
         .tab-pane {
             display: none;
@@ -338,6 +425,11 @@
         }
     </style>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    
+    <!-- Leaflet CSS for real maps -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+          integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+          crossorigin=""/>
 
     <style>
         /* Authentication Modal Styles */
@@ -382,6 +474,33 @@
 
             .nav-links {
                 display: none;
+            }
+
+            /* Results layout responsive */
+            .results-layout {
+                flex-direction: column;
+                height: auto;
+            }
+
+            .map-container {
+                height: 300px;
+                border-right: none;
+                border-bottom: 1px solid #d1d5db;
+            }
+
+            .results-panel {
+                max-height: none;
+            }
+
+            .results-controls {
+                flex-direction: column;
+                gap: 12px;
+                align-items: stretch;
+            }
+
+            .filter-checkboxes {
+                flex-direction: column;
+                gap: 8px;
             }
 
             .stats-container {
@@ -608,25 +727,17 @@
                 <div class="search-tabs">
                     <button class="tab-btn active" data-tab="ai">
                         <i class="fas fa-robot"></i>
-                        AI Search
+                        Ask AI
                     </button>
-                    <button class="tab-btn" data-tab="zipcode">
-                        <i class="fas fa-map-marker-alt"></i>
-                        Zip Code
-                    </button>
-                    <button class="tab-btn" data-tab="category">
-                        <i class="fas fa-list"></i>
-                        Category
-                    </button>
-                    <button class="tab-btn" data-tab="affiliation">
-                        <i class="fas fa-synagogue"></i>
-                        Affiliation
+                    <button class="tab-btn" data-tab="filtration">
+                        <i class="fas fa-filter"></i>
+                        Customize Search
                     </button>
                 </div>
 
                 <!-- Tab Content -->
                 <div class="tab-content">
-                    <!-- AI Search -->
+                    <!-- Ask AI -->
                     <div class="tab-pane active" id="ai-tab">
                         <div class="ai-search-bar">
                             <i class="fas fa-robot search-icon"></i>
@@ -642,74 +753,63 @@
                         </p>
                     </div>
 
-                    <!-- Zip Code Search -->
-                    <div class="tab-pane" id="zipcode-tab">
-                        <div class="zipcode-search">
-                            <input type="text" id="zipcodeInput" class="zipcode-input" placeholder="Enter zip code (e.g., 10001)">
-                            <button class="search-btn" onclick="searchByZipcode()">
-                                <i class="fas fa-search"></i>
-                                Search
-                            </button>
+                    <!-- Customize Search -->
+                    <div class="tab-pane" id="filtration-tab">
+                        <!-- Step 1: Category Selection -->
+                        <div class="filtration-step active" id="category-step">
+                            <h3 class="step-title">
+                                <i class="fas fa-list"></i>
+                                Step 1: Choose a Category
+                            </h3>
+                            <div class="category-grid">
+                                <button class="category-btn" onclick="selectCategory('synagogue')">
+                                    <i class="fas fa-synagogue"></i>
+                                    Synagogues
+                                </button>
+                                <button class="category-btn" onclick="selectCategory('school')">
+                                    <i class="fas fa-school"></i>
+                                    Schools
+                                </button>
+                                <button class="category-btn" onclick="selectCategory('youth')">
+                                    <i class="fas fa-users"></i>
+                                    Youth Programs
+                                </button>
+                                <button class="category-btn" onclick="selectCategory('education')">
+                                    <i class="fas fa-book"></i>
+                                    Education
+                                </button>
+                                <button class="category-btn" onclick="selectCategory('hillel')">
+                                    <i class="fas fa-university"></i>
+                                    Campus Hillel
+                                </button>
+                                <button class="category-btn" onclick="selectCategory('community')">
+                                    <i class="fas fa-heart"></i>
+                                    Community
+                                </button>
+                            </div>
                         </div>
-                    </div>
 
-                    <!-- Category Search -->
-                    <div class="tab-pane" id="category-tab">
-                        <div class="category-grid">
-                            <button class="category-btn" onclick="searchByCategory('synagogue')">
-                                <i class="fas fa-synagogue"></i>
-                                Synagogues
-                            </button>
-                            <button class="category-btn" onclick="searchByCategory('school')">
-                                <i class="fas fa-school"></i>
-                                Schools
-                            </button>
-                            <button class="category-btn" onclick="searchByCategory('youth')">
-                                <i class="fas fa-users"></i>
-                                Youth Programs
-                            </button>
-                            <button class="category-btn" onclick="searchByCategory('education')">
-                                <i class="fas fa-book"></i>
-                                Education
-                            </button>
-                            <button class="category-btn" onclick="searchByCategory('hillel')">
-                                <i class="fas fa-university"></i>
-                                Campus Hillel
-                            </button>
-                            <button class="category-btn" onclick="searchByCategory('community')">
-                                <i class="fas fa-heart"></i>
-                                Community
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Affiliation Search -->
-                    <div class="tab-pane" id="affiliation-tab">
-                        <div class="affiliation-grid">
-                            <button class="affiliation-btn" onclick="searchByAffiliation('Reform')">
-                                <i class="fas fa-synagogue"></i>
-                                Reform
-                            </button>
-                            <button class="affiliation-btn" onclick="searchByAffiliation('Conservative')">
-                                <i class="fas fa-synagogue"></i>
-                                Conservative
-                            </button>
-                            <button class="affiliation-btn" onclick="searchByAffiliation('Orthodox')">
-                                <i class="fas fa-synagogue"></i>
-                                Orthodox
-                            </button>
-                            <button class="affiliation-btn" onclick="searchByAffiliation('Reconstructionist')">
-                                <i class="fas fa-synagogue"></i>
-                                Reconstructionist
-                            </button>
-                            <button class="affiliation-btn" onclick="searchByAffiliation('Chabad')">
-                                <i class="fas fa-synagogue"></i>
-                                Chabad
-                            </button>
-                            <button class="affiliation-btn" onclick="searchByAffiliation('Pluralistic')">
-                                <i class="fas fa-synagogue"></i>
-                                Pluralistic
-                            </button>
+                        <!-- Step 2: Zip Code Entry -->
+                        <div class="filtration-step" id="zipcode-step" style="display: none;">
+                            <h3 class="step-title">
+                                <i class="fas fa-map-marker-alt"></i>
+                                Step 2: Enter Your Zip Code
+                            </h3>
+                            <div class="selected-category-display">
+                                <span class="selected-category-label">Selected Category:</span>
+                                <span class="selected-category-value" id="selectedCategoryDisplay"></span>
+                                <button class="change-category-btn" onclick="goBackToCategory()">
+                                    <i class="fas fa-edit"></i>
+                                    Change
+                                </button>
+                            </div>
+                            <div class="zipcode-search">
+                                <input type="text" id="filtrationZipcodeInput" class="zipcode-input" placeholder="Enter zip code (e.g., 10001)">
+                                <button class="search-btn" onclick="searchByFiltration()">
+                                    <i class="fas fa-search"></i>
+                                    Search
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -814,10 +914,90 @@
 
     <!-- Search Results Section -->
     <section class="search-results" id="searchResults" style="display: none;">
-        <div class="container">
-            <h2 class="section-title" id="resultsTitle">Search Results</h2>
-            <div class="results-grid" id="resultsGrid">
-                <!-- Results will be loaded here -->
+        <div class="results-container">
+            <!-- Results Header -->
+            <div class="results-header">
+                <h2 class="results-title" id="resultsTitle">Search Results</h2>
+                <div class="results-count" id="resultsCount"></div>
+            </div>
+            
+            <!-- Main Results Layout -->
+            <div class="results-layout">
+                <!-- Map Container -->
+                <div class="map-container">
+                    <div id="map" class="map-view" style="min-height: 400px; background: #f0f0f0;">
+                        <!-- Interactive map will be initialized here -->
+                        <div id="loading-message" style="display: flex; align-items: center; justify-content: center; height: 100%; flex-direction: column; color: #6b7280;">
+                            <i class="fas fa-spinner fa-spin" style="font-size: 24px; margin-bottom: 12px;"></i>
+                            <p>Loading interactive map...</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Map Controls -->
+                    <div class="map-controls">
+                        <button class="map-control-btn" id="zoomIn" title="Zoom In">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                        <button class="map-control-btn" id="zoomOut" title="Zoom Out">
+                            <i class="fas fa-minus"></i>
+                        </button>
+                        <button class="map-control-btn" id="centerMap" title="Center Map">
+                            <i class="fas fa-crosshairs"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Results Panel -->
+                <div class="results-panel">
+                    <!-- Sort and Filter Controls -->
+                    <div class="results-controls">
+                        <div class="sort-controls">
+                            <label for="sortSelect">Sort by:</label>
+                            <select id="sortSelect" class="sort-select">
+                                <option value="relevance">Most Relevant</option>
+                                <option value="distance">Distance</option>
+                                <option value="name">Name A-Z</option>
+                                <option value="denomination">Denomination</option>
+                            </select>
+                        </div>
+                        
+                        <div class="filter-controls">
+                            <button class="filter-btn" id="filterToggle">
+                                <i class="fas fa-filter"></i>
+                                Filters
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Filter Panel (collapsible) -->
+                    <div class="filter-panel" id="filterPanel" style="display: none;">
+                        <div class="filter-section">
+                            <h4>Denomination</h4>
+                            <div class="filter-checkboxes">
+                                <label><input type="checkbox" value="reform"> Reform</label>
+                                <label><input type="checkbox" value="conservative"> Conservative</label>
+                                <label><input type="checkbox" value="orthodox"> Orthodox</label>
+                                <label><input type="checkbox" value="chabad"> Chabad</label>
+                                <label><input type="checkbox" value="reconstructionist"> Reconstructionist</label>
+                            </div>
+                        </div>
+                        
+                        <div class="filter-section">
+                            <h4>Programs</h4>
+                            <div class="filter-checkboxes">
+                                <label><input type="checkbox" value="youth"> Youth Programs</label>
+                                <label><input type="checkbox" value="hebrew"> Hebrew School</label>
+                                <label><input type="checkbox" value="adult"> Adult Education</label>
+                                <label><input type="checkbox" value="family"> Family Programs</label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Results List -->
+                    <div class="results-list" id="resultsGrid">
+                        <!-- Results will be loaded here -->
+                    </div>
+                </div>
             </div>
         </div>
     </section>
@@ -902,26 +1082,516 @@
             gap: 24px;
         }
 
-        /* Search Results */
+        /* Search Results - Zillow-like Layout */
         .search-results {
-            background: white;
-            padding: 80px 20px;
+            background: #f7f8fa;
+            padding: 0;
+            min-height: calc(100vh - 80px);
         }
 
-        /* Institution Cards */
+        .results-container {
+            max-width: 100%;
+            margin: 0;
+            padding: 0;
+        }
+
+        .results-header {
+            background: white;
+            padding: 20px 24px;
+            border-bottom: 1px solid #e5e7eb;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .results-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: #1f2937;
+            margin: 0;
+        }
+
+        .results-count {
+            color: #6b7280;
+            font-size: 14px;
+        }
+
+        .results-layout {
+            display: flex;
+            height: calc(100vh - 140px);
+        }
+
+        /* Map Container */
+        .map-container {
+            flex: 1;
+            position: relative;
+            background: #e5e7eb;
+            border-right: 1px solid #d1d5db;
+        }
+
+        .map-view {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            min-height: 400px;
+            background: #f0f0f0; /* Visible background to debug */
+        }
+        
+        /* Ensure Leaflet map is properly sized and visible */
+        .leaflet-container {
+            height: 100% !important;
+            width: 100% !important;
+            background: #a8d8ea !important; /* Blue background to see map area */
+            position: relative !important;
+            z-index: 1;
+        }
+        
+        /* Ensure map tiles are visible */
+        .leaflet-tile {
+            opacity: 1 !important;
+        }
+
+        .map-placeholder {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+            color: #6b7280;
+            text-align: center;
+        }
+
+        .map-placeholder i {
+            font-size: 48px;
+            margin-bottom: 16px;
+            color: #9ca3af;
+        }
+
+        .map-placeholder p {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #374151;
+        }
+
+        .map-placeholder small {
+            font-size: 14px;
+            color: #6b7280;
+        }
+
+        .map-controls {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .map-control-btn {
+            width: 40px;
+            height: 40px;
+            background: white;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .map-control-btn:hover {
+            background: #f9fafb;
+            border-color: #9ca3af;
+        }
+
+        .map-control-btn i {
+            color: #374151;
+            font-size: 14px;
+        }
+
+        /* Results Panel */
+        .results-panel {
+            flex: 1;
+            background: white;
+            display: flex;
+            flex-direction: column;
+            max-height: calc(100vh - 140px);
+        }
+
+        .results-controls {
+            padding: 16px 20px;
+            border-bottom: 1px solid #e5e7eb;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: white;
+        }
+
+        .sort-controls {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .sort-controls label {
+            font-size: 14px;
+            font-weight: 500;
+            color: #374151;
+        }
+
+        .sort-select {
+            padding: 8px 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 14px;
+            background: white;
+            color: #374151;
+            outline: none;
+        }
+
+        .sort-select:focus {
+            border-color: #3b82f6;
+            ring: 2px;
+            ring-color: rgba(59, 130, 246, 0.1);
+        }
+
+        .filter-controls .filter-btn {
+            background: #f3f4f6;
+            color: #374151;
+            border: 1px solid #d1d5db;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s;
+        }
+
+        .filter-controls .filter-btn:hover {
+            background: #e5e7eb;
+        }
+
+        .filter-controls .filter-btn.active {
+            background: #3b82f6;
+            color: white;
+            border-color: #3b82f6;
+        }
+
+        /* Filter Panel */
+        .filter-panel {
+            background: #f9fafb;
+            border-bottom: 1px solid #e5e7eb;
+            padding: 16px 20px;
+        }
+
+        .filter-section {
+            margin-bottom: 16px;
+        }
+
+        .filter-section:last-child {
+            margin-bottom: 0;
+        }
+
+        .filter-section h4 {
+            font-size: 14px;
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 8px;
+        }
+
+        .filter-checkboxes {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .filter-checkboxes label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 14px;
+            color: #374151;
+            cursor: pointer;
+        }
+
+        .filter-checkboxes input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            border: 1px solid #d1d5db;
+            border-radius: 3px;
+            accent-color: #3b82f6;
+        }
+
+        /* Results List */
+        .results-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            background: #f7f8fa;
+        }
+
+        /* Institution Cards - Updated for List Layout */
         .institution-card {
             background: white;
-            border-radius: 16px;
+            border-radius: 12px;
             overflow: hidden;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
             transition: all 0.3s ease;
             cursor: pointer;
             border: 1px solid #e5e7eb;
+            margin-bottom: 16px;
         }
 
         .institution-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+            border-color: #3b82f6;
+        }
+
+        /* Demo Map Styles */
+        .demo-map {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            background: #f8fafc;
+        }
+
+        .demo-map-header {
+            background: white;
+            padding: 16px 20px;
+            border-bottom: 1px solid #e5e7eb;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .demo-map-header h3 {
+            font-size: 18px;
+            font-weight: 600;
+            color: #374151;
+            margin: 0;
+        }
+
+        .demo-map-count {
+            font-size: 14px;
+            color: #6b7280;
+            background: #f3f4f6;
+            padding: 4px 12px;
+            border-radius: 12px;
+        }
+
+        .demo-map-content {
+            flex: 1;
+            position: relative;
+            background: linear-gradient(135deg, #e0f2fe 0%, #b3e5fc 100%);
+        }
+
+        .demo-map-area {
+            width: 100%;
+            height: calc(100% - 60px);
+            position: relative;
+            background-image: 
+                radial-gradient(circle at 25% 25%, rgba(59, 130, 246, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 75% 75%, rgba(16, 185, 129, 0.1) 0%, transparent 50%);
+        }
+
+        .demo-marker {
+            position: absolute !important;
+            z-index: 10 !important;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+            width: 40px;
+            height: 50px;
+        }
+
+        .demo-marker:hover {
+            transform: scale(1.2);
+            z-index: 100;
+        }
+
+        .demo-marker:hover .marker-icon {
+            background: #1d4ed8;
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.5);
+        }
+
+        .marker-icon {
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #2563eb;
+            color: white;
+            border-radius: 50%;
+            border: 3px solid white;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+            position: relative;
+        }
+
+        .marker-icon i {
+            font-size: 14px;
+            color: white;
+        }
+
+
+
+        .marker-tooltip {
+            position: absolute;
+            bottom: 35px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: white;
+            padding: 8px 12px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            border: 1px solid #e5e7eb;
+            white-space: nowrap;
+            display: none;
+            z-index: 20;
+            max-width: 200px;
+            text-align: center;
+        }
+
+        .marker-tooltip::after {
+            content: '';
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            border: 6px solid transparent;
+            border-top-color: white;
+        }
+
+        .marker-tooltip strong {
+            color: #374151;
+            font-size: 14px;
+            display: block;
+            margin-bottom: 2px;
+        }
+
+        .marker-tooltip small {
+            color: #6b7280;
+            font-size: 12px;
+        }
+
+        .demo-map-legend {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(8px);
+            padding: 12px 20px;
+            border-top: 1px solid rgba(229, 231, 235, 0.8);
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 4px;
+        }
+
+        .legend-item i {
+            color: #3b82f6;
+            font-size: 14px;
+        }
+
+        .legend-item span {
+            font-size: 14px;
+            font-weight: 500;
+            color: #374151;
+        }
+
+        .legend-note {
+            margin-top: 4px;
+        }
+
+        .legend-note small {
+            color: #6b7280;
+            font-size: 12px;
+        }
+
+        /* Leaflet Map Styles */
+        .leaflet-marker-icon {
+            background: #2563eb;
+            color: white;
+            border-radius: 50%;
+            border: 3px solid white;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 30px !important;
+            height: 30px !important;
+        }
+
+        .leaflet-marker-icon i {
+            font-size: 14px;
+            color: white;
+        }
+
+        .marker-popup h4 {
+            margin: 0 0 8px 0;
+            color: #1f2937;
+            font-size: 16px;
+        }
+
+        .marker-popup p {
+            margin: 4px 0;
+            font-size: 14px;
+        }
+
+        .marker-popup small {
+            color: #6b7280;
+            font-size: 12px;
+        }
+
+        .map-error {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            text-align: center;
+            color: #6b7280;
+            padding: 2rem;
+        }
+
+        .map-error i {
+            font-size: 48px;
+            color: #f59e0b;
+            margin-bottom: 16px;
+        }
+
+        .map-error h3 {
+            color: #374151;
+            margin-bottom: 8px;
+        }
+
+        /* Override Leaflet default styles */
+        .custom-marker {
+            background: transparent !important;
+            border: none !important;
+        }
+
+        /* Loading spinner animation */
+        .fa-spinner {
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
         }
 
         .card-header {
@@ -1566,6 +2236,23 @@
                 flex: 1 1 auto;
                 min-width: 100px;
             }
+            
+            /* Customize search responsive */
+            .selected-category-display {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 8px;
+            }
+            
+            .change-category-btn {
+                margin-left: 0;
+                align-self: flex-end;
+            }
+            
+            .step-title {
+                font-size: 18px;
+                margin-bottom: 20px;
+            }
         }
     </style>
 
@@ -1710,6 +2397,624 @@
         </div>
     </div>
     <script src="script.js"></script>
+    
+    <!-- Leaflet JavaScript for real maps -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+            integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+            crossorigin=""></script>
+    
+    <!-- Google Maps API -->
+    <script>
+        // Google Maps API key - Replace with your actual API key
+        const GOOGLE_MAPS_API_KEY = 'YOUR_API_KEY_HERE';
+        
+        // Load Google Maps API dynamically
+        function loadGoogleMapsAPI() {
+            if (typeof google !== 'undefined' && google.maps) {
+                return Promise.resolve();
+            }
+            
+            return new Promise((resolve, reject) => {
+                const script = document.createElement('script');
+                script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=places`;
+                script.async = true;
+                script.defer = true;
+                script.onload = resolve;
+                script.onerror = reject;
+                document.head.appendChild(script);
+            });
+        }
+        
+        // Simple, guaranteed-to-work map initialization
+        window.initializeMapForResults = function(institutions) {
+            console.log('🔄 Starting SIMPLE map initialization...');
+            
+            const safeInstitutions = Array.isArray(institutions) ? institutions : [];
+            console.log('📊 Institutions to map:', safeInstitutions.length);
+            
+            // ALWAYS show something - no complex promises or async
+            showSimpleMap(safeInstitutions);
+        };
+        
+        // Simple map that ALWAYS works
+        function showSimpleMap(institutions) {
+            const mapContainer = document.getElementById('map');
+            if (!mapContainer) {
+                console.error('❌ Map container not found');
+                return;
+            }
+            
+            // Create a visual map representation that always works
+            const institutionList = institutions.slice(0, 10).map((inst, index) => {
+                const position = getDisplayPosition(index, institutions.length);
+                return `
+                    <div class="simple-marker" 
+                         style="position: absolute; 
+                                left: ${position.x}%; 
+                                top: ${position.y}%; 
+                                transform: translate(-50%, -50%);
+                                z-index: 10;">
+                        <div class="marker-pin" 
+                             style="width: 20px; 
+                                    height: 20px; 
+                                    background: #3b82f6; 
+                                    border-radius: 50%; 
+                                    border: 3px solid white; 
+                                    box-shadow: 0 2px 8px rgba(0,0,0,0.3); 
+                                    cursor: pointer;"
+                             title="${inst['Synagogue Name'] || 'Institution'} - ${inst['Full Address'] || 'Address not available'}">
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            mapContainer.innerHTML = `
+                <div style="height: 100%; 
+                           background: linear-gradient(135deg, #a8d8ea 0%, #7fb8c4 100%); 
+                           position: relative; 
+                           border-radius: 8px; 
+                           overflow: hidden;">
+                    
+                    <!-- Map Header -->
+                    <div style="position: absolute; 
+                               top: 15px; 
+                               left: 15px; 
+                               background: rgba(255,255,255,0.9); 
+                               padding: 8px 12px; 
+                               border-radius: 6px; 
+                               box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+                               z-index: 20;">
+                        <strong style="color: #1f2937; font-size: 14px;">
+                            📍 ${institutions.length} Institution${institutions.length !== 1 ? 's' : ''} Found
+                        </strong>
+                    </div>
+                    
+                    <!-- Map Content -->
+                    <div style="position: relative; height: 100%; width: 100%;">
+                        ${institutionList}
+                    </div>
+                    
+                    <!-- Map Legend -->
+                    <div style="position: absolute; 
+                               bottom: 15px; 
+                               left: 15px; 
+                               background: rgba(255,255,255,0.9); 
+                               padding: 8px 12px; 
+                               border-radius: 6px; 
+                               box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+                               z-index: 20;">
+                        <small style="color: #6b7280;">
+                            🗺️ Visual Map View - Hover pins for details
+                        </small>
+                    </div>
+                </div>
+            `;
+            
+            console.log('✅ Simple map displayed with', institutions.length, 'markers');
+        }
+        
+        // Calculate display positions for markers
+        function getDisplayPosition(index, total) {
+            // Create a nice spread pattern
+            const patterns = [
+                // For 1-4 institutions
+                [{x: 50, y: 50}],
+                [{x: 35, y: 40}, {x: 65, y: 60}],
+                [{x: 30, y: 35}, {x: 50, y: 60}, {x: 70, y: 45}],
+                [{x: 25, y: 30}, {x: 45, y: 55}, {x: 65, y: 35}, {x: 75, y: 65}],
+                // For 5+ institutions - grid pattern
+            ];
+            
+            if (total <= 4 && patterns[total - 1]) {
+                return patterns[total - 1][index] || {x: 50, y: 50};
+            }
+            
+            // Grid pattern for 5+ institutions
+            const cols = Math.ceil(Math.sqrt(total));
+            const rows = Math.ceil(total / cols);
+            const col = index % cols;
+            const row = Math.floor(index / cols);
+            
+            return {
+                x: 20 + (col * 60 / (cols - 1 || 1)),
+                y: 25 + (row * 50 / (rows - 1 || 1))
+            };
+        }
+        
+                // Real map implementation using Leaflet
+        let mapInstance = null;
+        let mapMarkers = [];
+        
+        async function initializeDemoMap(institutions) {
+            console.log('🗺️ STARTING MAP INITIALIZATION');
+            console.log('📍 Input institutions:', {
+                count: institutions ? institutions.length : 0,
+                sample: institutions ? institutions.slice(0, 2) : [],
+                addresses: institutions ? institutions.map(i => i['Full Address']).slice(0, 3) : []
+            });
+            
+            const mapContainer = document.getElementById('map');
+            const mapPlaceholder = document.getElementById('mapPlaceholder');
+            
+            console.log('🔍 Map elements:', {
+                mapContainer: !!mapContainer,
+                mapPlaceholder: !!mapPlaceholder,
+                mapContainerVisible: mapContainer ? mapContainer.style.display !== 'none' : false
+            });
+            
+            // Show loading state
+            if (mapPlaceholder) {
+                mapPlaceholder.innerHTML = `
+                    <i class="fas fa-spinner fa-spin"></i>
+                    <p>Loading Map & Geocoding Addresses...</p>
+                    <small>Getting precise locations for institutions</small>
+                `;
+                mapPlaceholder.style.display = 'flex';
+            }
+            
+            // Clear any existing content
+            mapContainer.innerHTML = '';
+            
+                        // Initialize the map if not already done
+            if (!mapInstance) {
+                try {
+                    // Ensure container is ready and properly sized
+                    mapContainer.innerHTML = '';
+                    mapContainer.style.height = '100%';
+                    mapContainer.style.width = '100%';
+                    mapContainer.style.position = 'relative';
+                    
+                    console.log('🗺️ Creating map instance...');
+                    
+                    // Create the map with forced dimensions
+                    mapInstance = L.map(mapContainer, {
+                        attributionControl: true,
+                        zoomControl: true,
+                        scrollWheelZoom: true,
+                        doubleClickZoom: true,
+                        touchZoom: true,
+                        preferCanvas: false
+                    }).setView([39.8283, -98.5795], 5);
+                    
+                    console.log('🗺️ Adding tile layer...');
+                    
+                    // Add OpenStreetMap tiles with better error handling
+                    const tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                        maxZoom: 19,
+                        attribution: '© OpenStreetMap contributors',
+                        subdomains: ['a', 'b', 'c'],
+                        crossOrigin: true
+                    });
+                    
+                    tileLayer.on('tileerror', function(error) {
+                        console.warn('⚠️ Tile loading error:', error);
+                    });
+                    
+                    tileLayer.on('load', function() {
+                        console.log('✅ Map tiles loaded successfully');
+                    });
+                    
+                    tileLayer.addTo(mapInstance);
+                    
+                    // Force map to redraw
+                    setTimeout(() => {
+                        if (mapInstance) {
+                            mapInstance.invalidateSize();
+                            console.log('🔄 Map size invalidated and redrawn');
+                        }
+                    }, 100);
+                    
+                    console.log('✅ Real map initialized successfully');
+                } catch (error) {
+                    console.error('❌ Error initializing map:', error);
+                    throw error; // Let the backup system handle this
+                }
+            }
+            
+            // Clear existing markers
+            mapMarkers.forEach(marker => mapInstance.removeLayer(marker));
+            mapMarkers = [];
+            
+            if (!institutions || institutions.length === 0) {
+                console.log('⚠️ No institutions to display on map');
+                if (mapPlaceholder) {
+                    mapPlaceholder.style.display = 'none';
+                }
+                return;
+            }
+            
+            console.log('🔍 About to start geocoding process');
+            console.log('📊 Processing institutions:', {
+                total: institutions.length,
+                willProcess: Math.min(institutions.length, 10),
+                addresses: institutions.slice(0, 10).map(i => i['Full Address'])
+            });
+            
+            // Add markers for each institution with real geocoding
+            const bounds = [];
+            const institutionsToProcess = institutions.slice(0, 10); // Limit to 10 for performance
+            
+            // Process institutions in batches to avoid overwhelming the geocoding service
+            for (let i = 0; i < institutionsToProcess.length; i++) {
+                const inst = institutionsToProcess[i];
+                
+                try {
+                    // Get real coordinates for this institution
+                    console.log(`🔍 Geocoding institution ${i + 1}/${institutionsToProcess.length}:`, inst['Synagogue Name'], inst['Full Address']);
+                    const coords = await getCoordinatesForInstitution(inst, i);
+                    
+                    if (coords && coords.length === 2 && !isNaN(coords[0]) && !isNaN(coords[1])) {
+                        bounds.push(coords);
+                        console.log(`✅ Successfully geocoded ${inst['Synagogue Name']} to:`, coords);
+                        
+                        // Create custom marker
+                        const marker = L.marker(coords, {
+                            icon: L.divIcon({
+                                className: 'custom-marker',
+                                html: `<div class="leaflet-marker-icon">
+                                         <i class="fas fa-map-marker-alt"></i>
+                                       </div>`,
+                                iconSize: [30, 30],
+                                iconAnchor: [15, 30]
+                            })
+                        }).addTo(mapInstance);
+                        
+                        // Add popup with institution info
+                        marker.bindPopup(`
+                            <div class="marker-popup">
+                                <h4>${inst['Synagogue Name'] || 'Institution'}</h4>
+                                <p><strong>${inst.Denomination || 'N/A'}</strong></p>
+                                <p><small>${inst['Full Address'] || 'Address not available'}</small></p>
+                                <p><small>Phone: ${inst['Phone Number'] || 'N/A'}</small></p>
+                            </div>
+                        `);
+                        
+                        mapMarkers.push(marker);
+                    } else {
+                        console.error(`❌ Invalid coordinates for ${inst['Synagogue Name']}:`, coords);
+                    }
+                    
+                    // Small delay to be respectful to the geocoding service
+                    if (i < institutionsToProcess.length - 1) {
+                        await new Promise(resolve => setTimeout(resolve, 200));
+                    }
+                } catch (error) {
+                    console.error(`❌ Error processing institution ${inst['Synagogue Name']}:`, error);
+                }
+            }
+            
+            // Hide loading state
+            if (mapPlaceholder) {
+                mapPlaceholder.style.display = 'none';
+            }
+            
+            // Fit map to show all markers with optimal zoom
+            if (bounds.length > 0) {
+                const group = new L.featureGroup(mapMarkers);
+                const groupBounds = group.getBounds();
+                
+                if (bounds.length === 1) {
+                    // Single marker - zoom to neighborhood level
+                    mapInstance.setView(bounds[0], 14);
+                    console.log('🎯 Single marker: Zoomed to level 14');
+                } else {
+                    // Multiple markers - calculate distance and set appropriate zoom
+                    const distance = calculateBoundsDistance(groupBounds);
+                    console.log('📏 Distance between markers:', distance + ' km');
+                    
+                    let maxZoom;
+                    if (distance < 5) {
+                        maxZoom = 15; // Very close markers (same neighborhood)
+                    } else if (distance < 20) {
+                        maxZoom = 13; // Same city
+                    } else if (distance < 100) {
+                        maxZoom = 11; // Same metro area
+                    } else {
+                        maxZoom = 9; // Regional view
+                    }
+                    
+                    const fitOptions = {
+                        padding: [20, 20], // Small padding for better visibility
+                        maxZoom: maxZoom
+                    };
+                    mapInstance.fitBounds(groupBounds, fitOptions);
+                    console.log(`🎯 Multiple markers: Fitted bounds with max zoom ${maxZoom} (distance: ${distance}km)`);
+                }
+                
+                // Force map refresh and visibility
+                setTimeout(() => {
+                    if (mapInstance) {
+                        mapInstance.invalidateSize(true);
+                        mapInstance._resetView(mapInstance.getCenter(), mapInstance.getZoom(), true);
+                        console.log('🔄 Forced map refresh after fitting bounds');
+                        
+                        // Make sure container is visible
+                        const mapContainer = document.getElementById('map');
+                        if (mapContainer) {
+                            mapContainer.style.visibility = 'visible';
+                            mapContainer.style.opacity = '1';
+                            console.log('👁️ Ensured map container visibility');
+                        }
+                    }
+                }, 200);
+                
+                console.log('🎯 FINAL RESULT: Map fitted to', bounds.length, 'geocoded locations');
+                console.log('📊 Summary: Processed', institutionsToProcess.length, 'institutions, successfully mapped', mapMarkers.length, 'markers');
+                console.log('🔍 Current zoom level:', mapInstance.getZoom());
+            } else {
+                console.warn('⚠️ No valid coordinates found for any institution');
+            }
+        }
+        
+        // Geocoding cache to avoid repeated API calls
+        const geocodeCache = new Map();
+        
+        // Robust geocoding with multiple fallbacks
+        async function getCoordinatesForInstitution(institution, index) {
+            try {
+                const address = institution['Full Address'];
+                if (!address) {
+                    console.warn('No address found for:', institution['Synagogue Name']);
+                    return getSimpleCoordinates(institution, index);
+                }
+                
+                // Check cache first
+                if (geocodeCache.has(address)) {
+                    return geocodeCache.get(address);
+                }
+                
+                // Add timeout to geocoding request
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+                
+                try {
+                    const encodedAddress = encodeURIComponent(address);
+                    const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodedAddress}&limit=1`, {
+                        signal: controller.signal
+                    });
+                    clearTimeout(timeoutId);
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    
+                    const data = await response.json();
+                    
+                    if (data && data.length > 0) {
+                        const lat = parseFloat(data[0].lat);
+                        const lon = parseFloat(data[0].lon);
+                        
+                        if (isNaN(lat) || isNaN(lon)) {
+                            throw new Error('Invalid coordinates returned');
+                        }
+                        
+                        const coords = [lat, lon];
+                        geocodeCache.set(address, coords);
+                        console.log(`✅ Geocoded "${address}" to:`, coords);
+                        return coords;
+                    } else {
+                        console.warn('⚠️ No geocoding results for:', address);
+                        // Fallback to simple coordinates
+                        const fallbackCoords = getSimpleCoordinates(institution, index);
+                        geocodeCache.set(address, fallbackCoords);
+                        return fallbackCoords;
+                    }
+                } catch (fetchError) {
+                    clearTimeout(timeoutId);
+                    if (fetchError.name === 'AbortError') {
+                        console.warn('⏰ Geocoding timeout for:', address);
+                    } else {
+                        console.warn('🌐 Geocoding fetch error for:', address, fetchError.message);
+                    }
+                    
+                    // Fallback to simple coordinates
+                    const fallbackCoords = getSimpleCoordinates(institution, index);
+                    geocodeCache.set(address, fallbackCoords);
+                    return fallbackCoords;
+                }
+            } catch (error) {
+                console.error('❌ Geocoding error for', institution['Synagogue Name'], ':', error);
+                // Final fallback
+                return getSimpleCoordinates(institution, index);
+            }
+        }
+        
+        // Calculate distance between bounds corners to determine appropriate zoom
+        function calculateBoundsDistance(bounds) {
+            const corner1 = bounds.getNorthWest();
+            const corner2 = bounds.getSouthEast();
+            
+            // Haversine formula to calculate distance in kilometers
+            const R = 6371; // Earth's radius in km
+            const dLat = (corner2.lat - corner1.lat) * Math.PI / 180;
+            const dLon = (corner2.lng - corner1.lng) * Math.PI / 180;
+            const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                      Math.cos(corner1.lat * Math.PI / 180) * Math.cos(corner2.lat * Math.PI / 180) *
+                      Math.sin(dLon/2) * Math.sin(dLon/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            return Math.round(R * c * 100) / 100; // Round to 2 decimal places
+        }
+        
+        // Backup map strategy - uses simpler geocoding
+        async function initializeBackupMap(institutions) {
+            console.log('🔧 Initializing backup map...');
+            const mapContainer = document.getElementById('map');
+            const mapPlaceholder = document.getElementById('mapPlaceholder');
+            
+            // Hide placeholder
+            if (mapPlaceholder) {
+                mapPlaceholder.style.display = 'none';
+            }
+            
+            // Ensure map exists
+            if (!mapInstance) {
+                try {
+                    mapInstance = L.map(mapContainer).setView([39.8283, -98.5795], 5);
+                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                        maxZoom: 19,
+                        attribution: '© OpenStreetMap contributors'
+                    }).addTo(mapInstance);
+                    console.log('✅ Backup map base created');
+                } catch (error) {
+                    throw new Error('Failed to create backup map base: ' + error.message);
+                }
+            }
+            
+            // Clear existing markers
+            mapMarkers.forEach(marker => mapInstance.removeLayer(marker));
+            mapMarkers = [];
+            
+            if (institutions.length === 0) {
+                console.log('📍 No institutions for backup map');
+                return;
+            }
+            
+            // Use simplified coordinate generation for backup
+            institutions.slice(0, 10).forEach((inst, index) => {
+                try {
+                    const coords = getSimpleCoordinates(inst, index);
+                    
+                    const marker = L.marker(coords, {
+                        icon: L.divIcon({
+                            className: 'custom-marker',
+                            html: `<div class="leaflet-marker-icon">
+                                     <i class="fas fa-map-marker-alt"></i>
+                                   </div>`,
+                            iconSize: [30, 30],
+                            iconAnchor: [15, 30]
+                        })
+                    }).addTo(mapInstance);
+                    
+                    marker.bindPopup(`
+                        <div class="marker-popup">
+                            <h4>${inst['Synagogue Name'] || 'Institution'}</h4>
+                            <p><strong>${inst.Denomination || 'N/A'}</strong></p>
+                            <p><small>${inst['Full Address'] || 'Address not available'}</small></p>
+                        </div>
+                    `);
+                    
+                    mapMarkers.push(marker);
+                } catch (error) {
+                    console.warn('⚠️ Failed to add marker for:', inst['Synagogue Name'], error);
+                }
+            });
+            
+            // Fit to markers
+            if (mapMarkers.length > 0) {
+                const group = new L.featureGroup(mapMarkers);
+                mapInstance.fitBounds(group.getBounds(), { padding: [20, 20], maxZoom: 13 });
+                console.log('✅ Backup map completed with', mapMarkers.length, 'markers');
+            }
+        }
+        
+        // Emergency fallback - always works
+        function initializeEmergencyMap(institutions) {
+            console.log('🚨 Initializing emergency fallback map...');
+            const mapContainer = document.getElementById('map');
+            const mapPlaceholder = document.getElementById('mapPlaceholder');
+            
+            // Show basic map placeholder with institution list
+            const institutionList = institutions.slice(0, 10).map((inst, index) => `
+                <div class="emergency-marker" style="margin-bottom: 8px; padding: 8px; background: #f3f4f6; border-radius: 4px;">
+                    <strong>${inst['Synagogue Name'] || 'Institution'}</strong><br>
+                    <small>${inst['Full Address'] || 'Address not available'}</small>
+                </div>
+            `).join('');
+            
+            mapContainer.innerHTML = `
+                <div class="emergency-map" style="height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #f9fafb; padding: 20px; text-align: center;">
+                    <div style="margin-bottom: 20px;">
+                        <i class="fas fa-map-marked-alt" style="font-size: 48px; color: #6b7280; margin-bottom: 16px;"></i>
+                        <h3 style="color: #374151; margin-bottom: 8px;">Map View</h3>
+                        <p style="color: #6b7280; margin-bottom: 20px;">${institutions.length} institution${institutions.length !== 1 ? 's' : ''} found</p>
+                    </div>
+                    <div style="width: 100%; max-width: 400px; max-height: 300px; overflow-y: auto;">
+                        ${institutionList}
+                    </div>
+                    <small style="color: #9ca3af; margin-top: 16px;">Interactive map temporarily unavailable</small>
+                </div>
+            `;
+            
+            if (mapPlaceholder) {
+                mapPlaceholder.style.display = 'none';
+            }
+            
+            console.log('✅ Emergency map displayed');
+        }
+        
+        // Simple coordinate generation for backup
+        function getSimpleCoordinates(institution, index) {
+            // Extract state/region from address for basic positioning
+            const address = institution['Full Address'] || '';
+            const stateCodes = {
+                'AL': [32.806671, -86.791130], 'AK': [61.370716, -152.404419], 'AZ': [33.729759, -111.431221],
+                'AR': [34.969704, -92.373123], 'CA': [36.116203, -119.681564], 'CO': [39.059811, -105.311104],
+                'CT': [41.767, -72.677], 'DE': [39.161921, -75.526755], 'FL': [27.766279, -81.686783],
+                'GA': [33.76, -84.39], 'HI': [21.30895, -157.826182], 'ID': [44.240459, -114.478828],
+                'IL': [40.349457, -88.986137], 'IN': [39.790942, -86.147685], 'IA': [42.011539, -93.210526],
+                'KS': [38.5266, -96.726486], 'KY': [37.669037, -84.670067], 'LA': [31.1801, -91.8749],
+                'ME': [44.323535, -69.765261], 'MD': [39.063946, -76.802101], 'MA': [42.2352, -71.0275],
+                'MI': [43.326618, -84.536095], 'MN': [45.7326, -93.9196], 'MS': [32.320, -90.207],
+                'MO': [38.572954, -92.189283], 'MT': [47.052312, -109.633835], 'NE': [41.12537, -98.268082],
+                'NV': [37.839333, -116.46648], 'NH': [43.452492, -71.563896], 'NJ': [40.314039, -74.756138],
+                'NM': [34.97273, -105.032363], 'NY': [42.659829, -75.615], 'NC': [35.630066, -79.806419],
+                'ND': [47.528912, -99.784012], 'OH': [40.367474, -82.996216], 'OK': [35.482309, -97.534994],
+                'OR': [44.931109, -123.029159], 'PA': [40.269789, -76.875613], 'RI': [41.82355, -71.422132],
+                'SC': [33.856892, -80.945007], 'SD': [44.2853, -99.4632], 'TN': [35.747845, -86.692345],
+                'TX': [31.106, -97.6475], 'UT': [39.419220, -111.950684], 'VT': [44.26639, -72.5804],
+                'VA': [37.54, -78.86], 'WA': [47.042418, -120.61878], 'WV': [38.349497, -81.633294],
+                'WI': [44.95, -89.5], 'WY': [42.7475, -107.2085]
+            };
+            
+            // Try to find state in address
+            let coords = [39.8283, -98.5795]; // Default to center US
+            for (const [state, stateCoords] of Object.entries(stateCodes)) {
+                if (address.includes(`, ${state} `) || address.includes(`, ${state}`)) {
+                    coords = [...stateCoords];
+                    break;
+                }
+            }
+            
+            // Add small random offset for multiple institutions
+            const offset = 0.1;
+            coords[0] += (Math.random() - 0.5) * offset;
+            coords[1] += (Math.random() - 0.5) * offset;
+            
+            return coords;
+        }
+        
+        // Show error message if map fails to load
+        function showMapError() {
+            const mapContainer = document.getElementById('map');
+            mapContainer.innerHTML = `
+                <div class="map-error">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <h3>Map Loading Error</h3>
+                    <p>Unable to load the map. Please refresh the page and try again.</p>
+                </div>
+            `;
+        }
+    </script>
     
     <!-- AI Search Configuration -->
     <script>

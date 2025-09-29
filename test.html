@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Page</title>
+</head>
+<body>
+    <h1>JavaScript Test</h1>
+    <button id="testBtn" onclick="testClick()">Click Me!</button>
+    <div id="output"></div>
+    
+    <script>
+        function testClick() {
+            document.getElementById('output').innerHTML = 'JavaScript is working!';
+            console.log('Button clicked successfully!');
+        }
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM loaded successfully');
+        });
+    </script>
+</body>
+</html> 
